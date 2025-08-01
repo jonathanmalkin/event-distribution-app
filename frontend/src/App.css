@@ -1,0 +1,100 @@
+.App {
+  min-height: 100vh;
+  background-color: #f8f9fa;
+  display: flex;
+  flex-direction: column;
+}
+
+.App-navigation {
+  background: white;
+  border-bottom: 1px solid #dee2e6;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 0 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 70px;
+}
+
+.nav-brand h1 {
+  margin: 0;
+  color: #495057;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.nav-links {
+  display: flex;
+  gap: 8px;
+}
+
+.nav-link {
+  padding: 10px 20px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #6c757d;
+  transition: all 0.2s ease;
+}
+
+.nav-link:hover {
+  background: #f8f9fa;
+  color: #495057;
+}
+
+.nav-link.active {
+  background: #007bff;
+  border-color: #007bff;
+  color: white;
+}
+
+.App-main {
+  flex: 1;
+  padding: 20px;
+  overflow-x: hidden;
+}
+
+@media (max-width: 768px) {
+  .App-navigation {
+    padding: 0 16px;
+    flex-direction: column;
+    gap: 12px;
+    min-height: auto;
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
+  
+  .nav-brand h1 {
+    font-size: 1.25rem;
+  }
+  
+  .nav-links {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .nav-link {
+    flex: 1;
+    text-align: center;
+  }
+  
+  .App-main {
+    padding: 16px;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

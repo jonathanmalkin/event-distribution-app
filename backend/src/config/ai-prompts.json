@@ -1,0 +1,73 @@
+{
+  "themeGeneration": {
+    "model": "gpt-4o",
+    "systemPrompt": "You are a creative assistant helping plan Kinky Coffee events. These are BDSM/kink community coffee meetups that are welcoming, inclusive, and appropriate for public coffee shop settings.",
+    "userPromptTemplate": "Generate 5 creative, fun themes for a Kinky Coffee event happening on {date} in {location}. \n\nThis is a BDSM/kink community coffee meetup that's welcoming to all experience levels. \n\nIMPORTANT: Carefully consider what holidays, observances, or special events occur on or near {date}. Include at least 2-3 themes that specifically incorporate these holidays/observances.\n\nEach theme should be:\n- Coffee or café related when possible\n- Playful and engaging for the kink community\n- Appropriate for a public coffee shop setting\n- SPECIFIC to holidays/events near {date}: US holidays (New Year's, MLK Day, Valentine's Day, Presidents Day, St. Patrick's Day, Easter, Memorial Day, Independence Day, Labor Day, Halloween, Veterans Day, Thanksgiving, Christmas), international holidays (Lunar New Year, International Women's Day, Pride Month, Oktoberfest, Diwali, Carnival, Boxing Day), awareness months, and seasonal celebrations\n- Incorporate seasonal elements based on the date (spring blooms, summer heat, autumn leaves, winter cozy vibes)\n- Reference cultural events, awareness months, or celebrations happening during this time\n- Creative and unique from each other\n\nFor {date}, think about:\n- What major holidays are within 2 weeks of this date?\n- What season is it and what seasonal activities are happening?\n- What awareness months or cultural celebrations are occurring?\n- What historical or cultural significance does this time period have?\n\nRespond with ONLY a JSON array of 5 theme objects, each with 'name' (2-4 words) and 'description' (1-2 sentences explaining the theme and its connection to the date/holiday). No other text.\n\nExample format:\n[\n  {\"name\": \"Theme Name\", \"description\": \"Brief description connecting to the specific date/holiday and what this theme involves.\"},\n  ...\n]",
+    "regeneratePromptTemplate": "The user provided this feedback: \"{feedback}\"\n\nGenerate 5 NEW creative themes for a Kinky Coffee event happening on {date} in {location}, taking their feedback into account. Make sure these are different from the previous suggestions.\n\nIMPORTANT: Consider what holidays, observances, or special events occur on or near {date}. Include themes that specifically incorporate these holidays/observances while addressing the user's feedback.\n\nRespond with ONLY a JSON array of 5 theme objects with 'name' and 'description' (including connection to the date/holiday). No other text."
+  },
+  "imageGeneration": {
+    "model": "dall-e-3",
+    "promptTemplate": "Create a warm, inviting coffee shop banner image for a community event called \"{theme}\".\n\nTheme context: {description}\n\nStyle: Modern, clean, welcoming coffee shop aesthetic\nElements: Coffee cups, warm lighting, community gathering vibes, subtle hints related to the theme\nColors: Warm browns, creams, soft lighting with accent colors that match the theme\nMood: Friendly, inclusive, cozy, sophisticated\nText: None (will be added separately)\n\nThe image should feel professional and appropriate for all audiences while maintaining a warm, community-focused coffee shop atmosphere that subtly reflects the theme.",
+    "fallbackPrompt": "Create a warm, inviting coffee shop banner image for a community event.\n\nStyle: Modern, clean, welcoming coffee shop aesthetic\nElements: Coffee cups, warm lighting, community gathering vibes\nColors: Warm browns, creams, soft lighting\nMood: Friendly, inclusive, cozy\nText: None\n\nProfessional and appropriate for all audiences with a warm, community-focused atmosphere."
+  },
+  "chatSystem": {
+    "model": "gpt-4o",
+    "systemPrompt": "You are an AI assistant helping plan Kinky Coffee events. These are BDSM/kink community coffee meetups that are welcoming, inclusive, and appropriate for public coffee shop settings.\n\nYour role is to help refine event themes, provide creative suggestions, and assist with event planning. Always keep suggestions community-appropriate and welcoming to all experience levels.\n\nWhen discussing themes, consider:\n- Coffee/café connections when possible\n- Seasonal appropriateness\n- Community inclusivity\n- Public venue appropriateness\n- Creative and engaging elements"
+  },
+  "availableModels": {
+    "textModels": [
+      {
+        "id": "gpt-4o",
+        "name": "GPT-4o",
+        "description": "Most capable multimodal model (faster and cheaper than GPT-4 Turbo)"
+      },
+      {
+        "id": "gpt-4o-2024-08-06",
+        "name": "GPT-4o (2024-08-06)",
+        "description": "Latest GPT-4o snapshot"
+      },
+      {
+        "id": "gpt-4o-mini",
+        "name": "GPT-4o Mini",
+        "description": "Affordable, fast model for lightweight tasks"
+      },
+      {
+        "id": "gpt-4.1-2025-04-14",
+        "name": "GPT-4.1",
+        "description": "Latest model with improved coding and instruction following"
+      },
+      {
+        "id": "gpt-4.1-mini-2025-04-14",
+        "name": "GPT-4.1 Mini",
+        "description": "Fast and cost-effective with strong performance"
+      },
+      {
+        "id": "gpt-4.1-nano-2025-04-14",
+        "name": "GPT-4.1 Nano",
+        "description": "Fastest and cheapest with 1M token context"
+      },
+      {
+        "id": "gpt-4-turbo",
+        "name": "GPT-4 Turbo",
+        "description": "Previous generation high-performance model"
+      },
+      {
+        "id": "gpt-3.5-turbo",
+        "name": "GPT-3.5 Turbo",
+        "description": "Fast and cost-effective for simple tasks"
+      }
+    ],
+    "imageModels": [
+      {
+        "id": "dall-e-3",
+        "name": "DALL-E 3",
+        "description": "High-quality image generation"
+      },
+      {
+        "id": "dall-e-2",
+        "name": "DALL-E 2",
+        "description": "Fast image generation"
+      }
+    ]
+  }
+}
