@@ -13,7 +13,24 @@ import {
 import './EventManagement.css';
 
 const EventManagement: React.FC = () => {
-  const [view, setView] = useState<'calendar' | 'list'>('calendar');
+  // Get initial state from URL parameters
+  const getInitialView = (): 'calendar' | 'list' => {
+    const params = new URLSearchParams(window.location.search);
+    const view = params.get('view');
+    return (view === 'calendar' || view === 'list') ? view : 'calendar';
+  };
+
+  const getInitialMonth = (): Date => {
+    const params = new URLSearchParams(window.location.search);
+    const month = params.get('month');
+    if (month) {
+      const date = new Date(month);
+      return isNaN(date.getTime()) ? new Date() : date;
+    }
+    return new Date();
+  };
+
+  const [view, setView] = useState<'calendar' | 'list'>(getInitialView);
   const [events, setEvents] = useState<EventListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<EventDetailType | null>(null);
@@ -28,11 +45,20 @@ const EventManagement: React.FC = () => {
   });
   
   // Calendar state
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [currentMonth, setCurrentMonth] = useState(getInitialMonth);
   const [calendarEvents, setCalendarEvents] = useState<{[date: string]: CalendarEvent[]}>({});
   
   // Venues for filtering
   const [venues, setVenues] = useState<Venue[]>([]);
+
+  // Update URL when view or month changes
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    params.set('view', view);
+    params.set('month', currentMonth.toISOString().slice(0, 7)); // YYYY-MM format
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState({}, '', newUrl);
+  }, [view, currentMonth]);
 
   useEffect(() => {
     loadVenues();
@@ -221,6 +247,43 @@ const EventManagement: React.FC = () => {
     setCurrentPage(1);
   };
 
+  const handleImportFromPlatforms = async () => {
+    if (!window.confirm('Import events from platforms? This will only import events from the past year.')) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch('http://localhost:3001/api/distribution/import', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ platforms: ['eventbrite'] }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`Sync completed: ${result.imported} events imported. ${result.note}`);
+        
+        // Reload events
+        if (view === 'calendar') {
+          loadCalendarEvents();
+        } else {
+          loadEvents();
+        }
+      } else {
+        const error = await response.json();
+        alert(`Sync failed: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Error syncing from platforms:', error);
+      alert('Failed to sync from platforms');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="event-management">
       <div className="event-management-header">
@@ -243,6 +306,15 @@ const EventManagement: React.FC = () => {
         </div>
         
         <div className="header-actions">
+          <button 
+            className="import-btn"
+            onClick={handleImportFromPlatforms}
+            disabled={loading}
+            title="Import events from platforms (past year only)"
+          >
+            📥 Import from Platforms
+          </button>
+          
           {view === 'list' && selectedEvents.length > 0 && (
             <div className="bulk-actions">
               <span className="selected-count">{selectedEvents.length} selected</span>

@@ -408,6 +408,233 @@ export class PlatformManager {
   }
 
   /**
+   * Import events from platforms into our database (past year only)
+   */
+  async importEventsFromPlatforms(platforms: string[] = []): Promise<{ imported: number; errors: string[]; note: string }> {
+    const platformsToProcess = platforms.length > 0 ? platforms : ['eventbrite'];
+    let imported = 0;
+    const errors: string[] = [];
+
+    for (const platform of platformsToProcess) {
+      try {
+        const importedCount = await this.importFromPlatform(platform);
+        imported += importedCount;
+      } catch (error) {
+        errors.push(`${platform}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+
+    return { 
+      imported, 
+      errors,
+      note: 'Only events from the past year are imported to keep data relevant and manageable.'
+    };
+  }
+
+  /**
+   * Import events from a specific platform
+   */
+  private async importFromPlatform(platform: string): Promise<number> {
+    switch (platform.toLowerCase()) {
+      case 'eventbrite':
+        return await this.importFromEventbrite();
+      
+      case 'facebook':
+        return await this.importFromFacebook();
+      
+      case 'instagram':
+        return await this.importFromInstagram();
+      
+      default:
+        throw new Error(`Import not supported for platform: ${platform}`);
+    }
+  }
+
+  /**
+   * Import events from Eventbrite (past year only)
+   */
+  private async importFromEventbrite(): Promise<number> {
+    if (!this.eventbriteService) {
+      throw new Error('Eventbrite service not configured');
+    }
+
+    try {
+      // Get all events from Eventbrite
+      const eventbriteEvents = await this.eventbriteService.getOrganizationEvents();
+      let imported = 0;
+      let skippedOld = 0;
+      let skippedExisting = 0;
+
+      // Filter events to only include those from the past year
+      const oneYearAgo = new Date();
+      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+      for (const eventbriteEvent of eventbriteEvents) {
+        try {
+          // Check if event is within the past year
+          const eventDate = new Date(eventbriteEvent.start.utc);
+          if (eventDate < oneYearAgo) {
+            skippedOld++;
+            continue;
+          }
+
+          // Check if event already exists in our database
+          // First check by platform_event_id in distributions
+          const existingEventQuery1 = `
+            SELECT e.id FROM events e
+            JOIN event_distributions ed ON e.id = ed.event_id
+            WHERE ed.platform = 'eventbrite' AND ed.platform_event_id = $1
+          `;
+          const existingResult1 = await pool.query(existingEventQuery1, [eventbriteEvent.id]);
+
+          if (existingResult1.rows.length > 0) {
+            skippedExisting++;
+            continue;
+          }
+
+          // Also check by theme and date to prevent duplicates when distribution records fail
+          const eventData = this.convertEventbriteEventToLocal(eventbriteEvent);
+          const existingEventQuery2 = `
+            SELECT id FROM events 
+            WHERE theme = $1 AND date_time = $2
+          `;
+          const existingResult2 = await pool.query(existingEventQuery2, [eventData.theme, eventData.date_time]);
+
+          if (existingResult2.rows.length > 0) {
+            skippedExisting++;
+            continue;
+          }
+
+          // Insert event into our database
+          const eventId = await this.insertEventIntoDatabase(eventData);
+          
+          // Create distribution record
+          await this.createDistributionRecord(eventId, 'eventbrite', eventbriteEvent.id, eventbriteEvent.url);
+          
+          // Get and store metrics
+          const metrics = await this.eventbriteService.getEventMetrics(eventbriteEvent.id);
+          await this.updatePlatformMetrics(eventId, 'eventbrite', metrics);
+
+          imported++;
+          console.log(`✅ Imported event: ${eventbriteEvent.name.text}`);
+        } catch (eventError) {
+          console.error(`❌ Error importing event ${eventbriteEvent.id}:`, eventError);
+        }
+      }
+
+      console.log(`📊 Import complete: ${imported} imported, ${skippedOld} too old, ${skippedExisting} already exist`);
+      return imported;
+    } catch (error) {
+      throw new Error(`Eventbrite import failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Import events from Facebook (placeholder)
+   */
+  private async importFromFacebook(): Promise<number> {
+    throw new Error('Facebook event import not yet implemented');
+  }
+
+  /**
+   * Import events from Instagram (placeholder)
+   */
+  private async importFromInstagram(): Promise<number> {
+    throw new Error('Instagram post import not yet implemented');
+  }
+
+  /**
+   * Convert Eventbrite event to our local format
+   */
+  private convertEventbriteEventToLocal(eventbriteEvent: any): any {
+    return {
+      title: eventbriteEvent.name.text,
+      theme: eventbriteEvent.name.text,
+      description: eventbriteEvent.description?.text || '',
+      ai_generated_description: eventbriteEvent.description?.text || '',
+      date_time: eventbriteEvent.start.utc,
+      banner_image_url: null, // Eventbrite doesn't provide banner images in the basic response
+      venue_data: eventbriteEvent.venue ? {
+        name: eventbriteEvent.venue.name || 'Online Event',
+        street_address: eventbriteEvent.venue.address?.address_1 || '',
+        city: eventbriteEvent.venue.address?.city || '',
+        state: eventbriteEvent.venue.address?.region || '',
+        zip_code: eventbriteEvent.venue.address?.postal_code || ''
+      } : null
+    };
+  }
+
+  /**
+   * Insert event into database
+   */
+  private async insertEventIntoDatabase(eventData: any): Promise<number> {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Insert venue if provided
+      let venueId = null;
+      if (eventData.venue_data) {
+        const venueQuery = `
+          INSERT INTO venues (name, street_address, city, state, zip_code, created_at, updated_at)
+          VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+          RETURNING id
+        `;
+        const venueResult = await client.query(venueQuery, [
+          eventData.venue_data.name,
+          eventData.venue_data.street_address,
+          eventData.venue_data.city,
+          eventData.venue_data.state,
+          eventData.venue_data.zip_code
+        ]);
+        venueId = venueResult.rows[0].id;
+      }
+
+      // Insert event
+      const eventQuery = `
+        INSERT INTO events (
+          title, theme, description, ai_generated_description, 
+          date_time, banner_image_url, venue_id, created_at, updated_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+        RETURNING id
+      `;
+      const eventResult = await client.query(eventQuery, [
+        eventData.title,
+        eventData.theme,
+        eventData.description,
+        eventData.ai_generated_description,
+        eventData.date_time,
+        eventData.banner_image_url,
+        venueId
+      ]);
+
+      await client.query('COMMIT');
+      return eventResult.rows[0].id;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Create distribution record for imported event
+   */
+  private async createDistributionRecord(eventId: number, platform: string, platformEventId: string, platformUrl: string): Promise<void> {
+    const query = `
+      INSERT INTO event_distributions (
+        event_id, platform, status, platform_event_id, platform_url, 
+        posted_at, last_synced, created_at, updated_at
+      )
+      VALUES ($1, $2, 'published', $3, $4, NOW(), NOW(), NOW(), NOW())
+    `;
+    
+    await pool.query(query, [eventId, platform, platformEventId, platformUrl]);
+  }
+
+  /**
    * Test all platform connections
    */
   async testConnections(): Promise<{ [platform: string]: any }> {
