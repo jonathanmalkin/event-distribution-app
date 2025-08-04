@@ -30,7 +30,7 @@ router.post('/publish/:eventId', async (req, res) => {
     // Prepare event data for platform manager
     const eventData = {
       id: parseInt(eventId),
-      title: eventRow.title,
+      title: eventRow.theme, // Use theme as title since title field doesn't exist
       theme: eventRow.theme,
       description: eventRow.description,
       ai_generated_description: eventRow.ai_generated_description,
@@ -65,8 +65,37 @@ router.post('/publish/:eventId', async (req, res) => {
       try {
         const results = await platformManager.distributeEvent(eventData, platformsToPublish);
         console.log(`Distribution completed for event ${eventId}:`, results);
+        
+        // Update database with results  
+        for (const result of results) {
+          const updateQuery = `
+            UPDATE event_distributions 
+            SET status = $1, platform_event_id = $2, platform_url = $3, error_message = $4, posted_at = $5
+            WHERE event_id = $6 AND platform = $7
+          `;
+          const values = [
+            result.success ? 'published' : 'failed',
+            result.platformId || null,
+            result.platformUrl || null,
+            result.error || null,
+            result.success ? new Date() : null,
+            eventId,
+            result.platform
+          ];
+          await pool.query(updateQuery, values);
+        }
       } catch (error) {
         console.error(`Distribution failed for event ${eventId}:`, error);
+        
+        // Mark all platforms as failed
+        for (const platform of platformsToPublish) {
+          const updateQuery = `
+            UPDATE event_distributions 
+            SET status = 'failed', error_message = $1
+            WHERE event_id = $2 AND platform = $3
+          `;
+          await pool.query(updateQuery, [error instanceof Error ? error.message : 'Unknown error', eventId, platform]);
+        }
       }
     }, 1000);
 

@@ -27,6 +27,13 @@ interface EventbriteEventData {
   invite_only: boolean;
   show_remaining: boolean;
   capacity?: number;
+  ticket_classes?: Array<{
+    name: string;
+    free: boolean;
+    quantity_total: number;
+    minimum_quantity: number;
+    maximum_quantity: number;
+  }>;
 }
 
 interface EventbriteVenueData {
@@ -106,7 +113,7 @@ export class EventbriteService {
    */
   async createEvent(eventData: EventbriteEventData): Promise<{ id: string; url: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/events/`, {
+      const response = await fetch(`${this.baseUrl}/organizations/${this.organizationId}/events/`, {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify({
@@ -230,6 +237,38 @@ export class EventbriteService {
         registrations: 0,
         engagement: 0
       };
+    }
+  }
+
+  /**
+   * Create Ticket Class for Event
+   */
+  async createTicketClass(eventId: string): Promise<string> {
+    try {
+      const response = await fetch(`${this.baseUrl}/events/${eventId}/ticket_classes/`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({
+          ticket_class: {
+            name: 'General Admission',
+            free: true,
+            quantity_total: 30,
+            minimum_quantity: 1,
+            maximum_quantity: 1
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(`Eventbrite API Error: ${error.error_description || error.error || 'Unknown error'}`);
+      }
+
+      const result = await response.json() as { id: string };
+      return result.id;
+    } catch (error) {
+      console.error('Error creating Eventbrite ticket class:', error);
+      throw error;
     }
   }
 
@@ -379,11 +418,11 @@ export class EventbriteService {
       },
       start: {
         timezone: 'America/Los_Angeles', // TODO: Make configurable
-        utc: startDate.toISOString()
+        utc: startDate.toISOString().replace(/\.\d{3}Z$/, 'Z')
       },
       end: {
         timezone: 'America/Los_Angeles',
-        utc: endDate.toISOString()
+        utc: endDate.toISOString().replace(/\.\d{3}Z$/, 'Z')
       },
       currency: 'USD',
       online_event: false,

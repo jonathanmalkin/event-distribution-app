@@ -45,12 +45,35 @@ const EventDetail: React.FC<EventDetailProps> = ({
     setIsEditing(false);
   };
 
-  const handleRepost = () => {
+  const handleRepost = async () => {
     if (selectedPlatforms.length === 0) {
       alert('Please select at least one platform');
       return;
     }
-    onRepost(event.id, selectedPlatforms);
+    
+    try {
+      const response = await fetch(`http://localhost:3001/api/distribution/publish/${event.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ platforms: selectedPlatforms }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`Distribution initiated for ${selectedPlatforms.join(', ')}`);
+        // Refresh event data to show updated status
+        window.location.reload(); // Simple refresh for now
+      } else {
+        const error = await response.json();
+        alert(`Distribution failed: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Error distributing event:', error);
+      alert('Failed to distribute event');
+    }
+    
     setShowRepostModal(false);
     setSelectedPlatforms([]);
   };
@@ -104,7 +127,10 @@ const EventDetail: React.FC<EventDetailProps> = ({
               </button>
             )}
             <button className="repost-btn" onClick={() => setShowRepostModal(true)}>
-              🔄 Repost
+              🔄 Distribute
+            </button>
+            <button className="status-btn" onClick={() => window.open(`http://localhost:3001/api/distribution/status/${event.id}`, '_blank')}>
+              📊 Status
             </button>
             <button className="close-btn" onClick={onClose}>
               ✕
@@ -286,6 +312,13 @@ const EventDetail: React.FC<EventDetailProps> = ({
                               {attempt.platform_event_id && (
                                 <div className="platform-id">
                                   ID: {attempt.platform_event_id}
+                                </div>
+                              )}
+                              {attempt.platform_url && (
+                                <div className="platform-link">
+                                  <a href={attempt.platform_url} target="_blank" rel="noopener noreferrer">
+                                    View on {platform.name} →
+                                  </a>
                                 </div>
                               )}
                               {attempt.error_message && (

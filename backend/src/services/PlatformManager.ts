@@ -129,33 +129,20 @@ export class PlatformManager {
     }
 
     try {
-      // Create Facebook Event
-      const eventResult = await this.facebookService.createEvent({
-        name: eventData.title || eventData.theme || 'Kinky Coffee Event',
-        description: eventData.description || eventData.ai_generated_description || 'Join us for coffee and community!',
-        start_time: new Date(eventData.date_time).toISOString(),
-        location: eventData.venue ? `${eventData.venue.city}, ${eventData.venue.state}` : 'TBD', // General location only
-        cover_url: eventData.banner_image_url,
-        online_event: false
-      });
-
-      // Also create a page post about the event
+      // Create Facebook Page Post (event creation requires special permissions)
       const postCaption = this.generateFacebookPost(eventData);
       const postResult = await this.facebookService.createPost({
-        message: postCaption,
-        link: eventResult.url,
-        picture: eventData.banner_image_url
+        message: postCaption
+        // Note: Picture/link parameters require ownership of the domain, so we'll just post text for now
       });
 
       return {
         platform: 'facebook',
         success: true,
-        platformId: eventResult.id,
-        platformUrl: eventResult.url,
+        platformId: postResult.id,
+        platformUrl: postResult.url,
         metrics: {
-          event_id: eventResult.id,
           post_id: postResult.id,
-          event_url: eventResult.url,
           post_url: postResult.url
         }
       };
@@ -212,19 +199,30 @@ export class PlatformManager {
     try {
       let venueId = undefined;
       
-      // Create venue if we have venue data
+      // Create venue if we have venue data (fallback to online event if venue creation fails)
       if (eventData.venue) {
-        const venueData = this.eventbriteService.convertVenueData(eventData.venue);
-        venueId = await this.eventbriteService.createVenue(venueData);
+        try {
+          const venueData = this.eventbriteService.convertVenueData(eventData.venue);
+          venueId = await this.eventbriteService.createVenue(venueData);
+        } catch (venueError) {
+          console.warn('Venue creation failed, creating online event instead:', venueError);
+          // Will create as online event without venue
+        }
       }
 
       // Create event
       const eventbriteEventData = this.eventbriteService.convertEventData(eventData);
       if (venueId) {
         eventbriteEventData.venue_id = venueId;
+        eventbriteEventData.online_event = false;
+      } else {
+        eventbriteEventData.online_event = true; // Make it an online event if no venue
       }
 
       const result = await this.eventbriteService.createEvent(eventbriteEventData);
+
+      // Create ticket class for the event
+      await this.eventbriteService.createTicketClass(result.id);
 
       // Publish the event
       await this.eventbriteService.publishEvent(result.id);
