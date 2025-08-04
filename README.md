@@ -1,6 +1,6 @@
 # Event Distribution App
 
-A custom-coded application to replace the n8n/WordPress automation system for creating and distributing Kinky Coffee events. Features a modern React frontend with ChatGPT integration and automated distribution to multiple platforms.
+A modern full-stack web application for creating and distributing Kinky Coffee events. Features a React frontend with integrated ChatGPT/DALL-E AI content generation and automated distribution to multiple platforms.
 
 ## Features
 
@@ -204,12 +204,12 @@ WORDPRESS_APP_PASSWORD=your_password
 - **RSVP Workflow**: Email → Location reveal → Optional newsletter signup
 - **Security**: All sensitive data encrypted, self-hosted for full control
 
-## Improvements Over n8n System
+## Key Advantages
 
 ### User Experience
-- ✅ Single-page application vs multiple WordPress/n8n interfaces
-- ✅ Real-time AI chat vs one-shot generation
-- ✅ Live preview before publishing
+- ✅ Modern single-page application with intuitive interface
+- ✅ Real-time AI chat for interactive content creation
+- ✅ Live preview before publishing with comprehensive management dashboard
 - ✅ Progress tracking through workflow
 
 ### Technical Benefits

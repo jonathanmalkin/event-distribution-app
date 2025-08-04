@@ -17,7 +17,7 @@ Create an automated event management and marketing system for Kinky Coffee event
 5. **Scalability**: Architecture that can expand to serve other event organizers
 
 ## Target Platforms
-- **WordPress** (central hub with event details)
+- **Web Application** (central hub with full event management dashboard)
 - **Facebook** (events + page posts)
 - **Instagram** (visual content)
 - **Eventbrite** (professional ticketing)  

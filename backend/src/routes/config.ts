@@ -219,6 +219,54 @@ router.post('/test-connections', async (req, res) => {
           }
           break;
 
+        case 'facebook':
+          // Test Facebook connection
+          if (process.env.FACEBOOK_ACCESS_TOKEN && process.env.FACEBOOK_PAGE_ID) {
+            try {
+              const FacebookService = require('../services/platforms/FacebookService').default;
+              const facebookService = new FacebookService();
+              const testResult = await facebookService.testConnection();
+              results.facebook = testResult;
+            } catch (error) {
+              results.facebook = { status: 'error', message: `Facebook service error: ${error.message}` };
+            }
+          } else {
+            results.facebook = { status: 'error', message: 'Facebook credentials not configured' };
+          }
+          break;
+
+        case 'instagram':
+          // Test Instagram connection
+          if (process.env.INSTAGRAM_ACCESS_TOKEN && process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID) {
+            try {
+              const InstagramService = require('../services/platforms/InstagramService').default;
+              const instagramService = new InstagramService();
+              const testResult = await instagramService.testConnection();
+              results.instagram = testResult;
+            } catch (error) {
+              results.instagram = { status: 'error', message: `Instagram service error: ${error.message}` };
+            }
+          } else {
+            results.instagram = { status: 'error', message: 'Instagram credentials not configured' };
+          }
+          break;
+
+        case 'eventbrite':
+          // Test Eventbrite connection
+          if (process.env.EVENTBRITE_API_KEY) {
+            try {
+              const EventbriteService = require('../services/platforms/EventbriteService').default;
+              const eventbriteService = new EventbriteService();
+              const testResult = await eventbriteService.testConnection();
+              results.eventbrite = testResult;
+            } catch (error) {
+              results.eventbrite = { status: 'error', message: `Eventbrite service error: ${error.message}` };
+            }
+          } else {
+            results.eventbrite = { status: 'error', message: 'Eventbrite API key not configured' };
+          }
+          break;
+
         default:
           results[platform] = { status: 'error', message: 'Platform test not implemented' };
       }

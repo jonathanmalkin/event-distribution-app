@@ -410,7 +410,7 @@ router.post('/:id/repost', async (req, res) => {
         results.push({
           platform,
           status: 'error',
-          error: error.message
+          error: error instanceof Error ? error.message : 'Unknown error'
         });
       }
     }
