@@ -113,6 +113,99 @@ export class FacebookService {
   }
 
   /**
+   * Create Instagram Post via Facebook Pages API (Cross-posting)
+   */
+  async createInstagramPost(postData: { image_url: string; caption: string }): Promise<{ id: string; url: string }> {
+    try {
+      // First, get the Instagram Business Account ID connected to this page
+      const instagramAccountId = await this.getConnectedInstagramAccount();
+      
+      if (!instagramAccountId) {
+        throw new Error('No Instagram Business Account connected to this Facebook Page');
+      }
+
+      // Step 1: Create media container
+      const containerResponse = await fetch(
+        `${this.baseUrl}/${instagramAccountId}/media`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            image_url: postData.image_url,
+            caption: postData.caption,
+            access_token: this.accessToken
+          })
+        }
+      );
+
+      if (!containerResponse.ok) {
+        const error = await containerResponse.json();
+        throw new Error(`Instagram API Error (Container): ${error.error?.message || 'Unknown error'}`);
+      }
+
+      const containerResult = await containerResponse.json() as { id: string };
+      
+      // Step 2: Publish the media container
+      const publishResponse = await fetch(
+        `${this.baseUrl}/${instagramAccountId}/media_publish`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            creation_id: containerResult.id,
+            access_token: this.accessToken
+          })
+        }
+      );
+
+      if (!publishResponse.ok) {
+        const error = await publishResponse.json();
+        throw new Error(`Instagram API Error (Publish): ${error.error?.message || 'Unknown error'}`);
+      }
+
+      const publishResult = await publishResponse.json() as { id: string };
+      
+      // Get the permalink for the published post
+      const mediaResponse = await fetch(
+        `${this.baseUrl}/${publishResult.id}?fields=permalink&access_token=${this.accessToken}`
+      );
+      
+      const mediaDetails = await mediaResponse.json() as { permalink: string };
+      
+      return {
+        id: publishResult.id,
+        url: mediaDetails.permalink
+      };
+    } catch (error) {
+      console.error('Error creating Instagram post via Facebook:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get connected Instagram Business Account ID
+   */
+  private async getConnectedInstagramAccount(): Promise<string | null> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/${this.pageId}?fields=instagram_business_account&access_token=${this.accessToken}`
+      );
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const result = await response.json() as { instagram_business_account?: { id: string } };
+      return result.instagram_business_account?.id || null;
+    } catch (error) {
+      console.error('Error getting connected Instagram account:', error);
+      return null;
+    }
+  }
+
+  /**
    * Get Facebook Event Details and Metrics
    */
   async getEventDetails(eventId: string): Promise<FacebookEventResponse & { metrics: any }> {

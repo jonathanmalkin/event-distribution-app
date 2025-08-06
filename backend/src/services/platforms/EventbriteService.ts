@@ -1,4 +1,5 @@
 import fetch from 'node-fetch';
+import FormData from 'form-data';
 
 interface EventbriteEventData {
   name: {
@@ -399,6 +400,62 @@ export class EventbriteService {
         success: false,
         message: `Connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       };
+    }
+  }
+
+  /**
+   * Upload image to Eventbrite and return media ID
+   */
+  async uploadImage(imageUrl: string): Promise<string> {
+    try {
+      console.log(`📸 Starting image upload to Eventbrite from: ${imageUrl}`);
+      
+      // First, fetch the image from the URL
+      const imageResponse = await fetch(imageUrl);
+      if (!imageResponse.ok) {
+        throw new Error(`Failed to fetch image from URL: ${imageResponse.statusText}`);
+      }
+
+      const imageBuffer = await imageResponse.buffer();
+      const contentType = imageResponse.headers.get('content-type') || 'image/png';
+      
+      console.log(`📸 Image downloaded: ${imageBuffer.length} bytes, type: ${contentType}`);
+      
+      // Create form data for multipart upload
+      const formData = new FormData();
+      
+      formData.append('type', 'image-event-logo');
+      formData.append('upload', imageBuffer, {
+        filename: 'event-logo.png',
+        contentType: contentType
+      });
+
+      console.log(`📸 Uploading to Eventbrite Media API...`);
+      
+      // Upload to Eventbrite
+      const uploadResponse = await fetch(`${this.baseUrl}/media/upload/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          ...formData.getHeaders()
+        },
+        body: formData
+      });
+
+      console.log(`📸 Upload response status: ${uploadResponse.status}`);
+
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        console.error(`📸 Upload failed with status ${uploadResponse.status}:`, errorText);
+        throw new Error(`Eventbrite Image Upload Error (${uploadResponse.status}): ${errorText}`);
+      }
+
+      const result = await uploadResponse.json() as { id: string };
+      console.log(`📸 Image uploaded successfully! Media ID: ${result.id}`);
+      return result.id;
+    } catch (error) {
+      console.error('📸 Error uploading image to Eventbrite:', error);
+      throw error;
     }
   }
 
