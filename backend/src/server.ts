@@ -4,6 +4,8 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
+import importRouter from './routes/import';
+import distributionRouter from './routes/distribution';
 
 dotenv.config();
 
@@ -13,7 +15,11 @@ const PORT = process.env.PORT || 3001;
 // Security middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: [
+    process.env.FRONTEND_URL || 'http://localhost:3000',
+    'http://localhost:3003',  // Allow frontend on port 3003
+    'http://localhost:3001'   // Allow same origin for testing
+  ],
   credentials: true
 }));
 
@@ -38,9 +44,10 @@ app.get('/health', (req, res) => {
 app.use('/api/events', require('./routes/events'));
 app.use('/api/venues', require('./routes/venues'));
 app.use('/api/ai', require('./routes/ai'));
-app.use('/api/distribution', require('./routes/distribution'));
+app.use('/api/distribution', distributionRouter);
 app.use('/api/rsvp', require('./routes/rsvp'));
 app.use('/api/config', require('./routes/config'));
+app.use('/api/import', importRouter);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

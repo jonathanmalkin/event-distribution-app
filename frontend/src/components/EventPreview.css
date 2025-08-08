@@ -138,6 +138,47 @@
   padding: 15px;
   border-radius: 6px;
   border: 1px solid #dee2e6;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.platform-item:hover {
+  border-color: #007bff;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
+}
+
+.platform-item.selected {
+  border-color: #007bff;
+  background-color: #f0f8ff;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.2);
+}
+
+.platform-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.platform-checkbox input[type="checkbox"] {
+  margin-top: 2px;
+  cursor: pointer;
+}
+
+.platform-info {
+  flex: 1;
+}
+
+.platform-warning {
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  color: #856404;
+  padding: 12px;
+  border-radius: 6px;
+  margin-top: 15px;
+  text-align: center;
+  font-weight: 500;
 }
 
 .platform-name {

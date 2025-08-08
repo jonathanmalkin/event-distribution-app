@@ -93,7 +93,7 @@ const EventCalendar: React.FC<EventCalendarProps> = ({
                 title={`${event.theme || 'Untitled Event'} at ${event.venue_name || 'TBD'}`}
               >
                 <span className="event-time">
-                  {new Date(event.date_time).toLocaleTimeString('en-US', { 
+                  {new Date(event.date_time || event.time).toLocaleTimeString('en-US', { 
                     hour: 'numeric', 
                     minute: '2-digit',
                     hour12: true 

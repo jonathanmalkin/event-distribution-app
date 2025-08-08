@@ -21,12 +21,13 @@ interface Event {
 
 interface EventPreviewProps {
   event: Event;
-  onPublish: () => void;
+  onPublish: (selectedPlatforms: string[]) => void;
   onBack: () => void;
   loading: boolean;
 }
 
 const EventPreview: React.FC<EventPreviewProps> = ({ event, onPublish, onBack, loading }) => {
+  const [selectedPlatforms, setSelectedPlatforms] = React.useState<string[]>(['wordpress', 'facebook', 'eventbrite', 'meetup']);
   const formatDateTime = (dateTime: string) => {
     const date = new Date(dateTime);
     return {
@@ -47,13 +48,21 @@ const EventPreview: React.FC<EventPreviewProps> = ({ event, onPublish, onBack, l
   const { date, time } = formatDateTime(event.date_time);
 
   const distributionPlatforms = [
-    { name: 'WordPress', description: 'Your main event website' },
-    { name: 'Facebook', description: 'Event page + post on your page' },
-    { name: 'Instagram', description: 'Visual post with event details' },
-    { name: 'Eventbrite', description: 'Professional ticketing platform' },
-    { name: 'Meetup', description: 'Community discovery platform' },
-    { name: 'FetLife', description: 'Kink community platform' }
+    { key: 'wordpress', name: 'WordPress', description: 'Your main event website' },
+    { key: 'facebook', name: 'Facebook', description: 'Event page + post on your page' },
+    { key: 'instagram', name: 'Instagram', description: 'Visual post with event details' },
+    { key: 'eventbrite', name: 'Eventbrite', description: 'Professional ticketing platform' },
+    { key: 'meetup', name: 'Meetup', description: 'Community discovery platform' },
+    { key: 'fetlife', name: 'FetLife', description: 'Kink community platform' }
   ];
+
+  const handlePlatformToggle = (platformKey: string) => {
+    setSelectedPlatforms(prev => 
+      prev.includes(platformKey) 
+        ? prev.filter(p => p !== platformKey)
+        : [...prev, platformKey]
+    );
+  };
 
   return (
     <div className="event-preview">
@@ -105,15 +114,31 @@ const EventPreview: React.FC<EventPreviewProps> = ({ event, onPublish, onBack, l
         </div>
 
         <div className="distribution-info">
-          <h4>Will be published to:</h4>
+          <h4>Select platforms to publish to:</h4>
           <div className="platform-list">
-            {distributionPlatforms.map((platform, index) => (
-              <div key={index} className="platform-item">
-                <div className="platform-name">{platform.name}</div>
-                <div className="platform-description">{platform.description}</div>
+            {distributionPlatforms.map((platform) => (
+              <div key={platform.key} className={`platform-item ${selectedPlatforms.includes(platform.key) ? 'selected' : ''}`}>
+                <label className="platform-checkbox">
+                  <input 
+                    type="checkbox" 
+                    checked={selectedPlatforms.includes(platform.key)}
+                    onChange={() => handlePlatformToggle(platform.key)}
+                    disabled={loading}
+                  />
+                  <div className="platform-info">
+                    <div className="platform-name">{platform.name}</div>
+                    <div className="platform-description">{platform.description}</div>
+                  </div>
+                </label>
               </div>
             ))}
           </div>
+          
+          {selectedPlatforms.length === 0 && (
+            <div className="platform-warning">
+              ⚠️ Please select at least one platform to publish to
+            </div>
+          )}
         </div>
 
         <div className="privacy-info">
@@ -143,11 +168,11 @@ const EventPreview: React.FC<EventPreviewProps> = ({ event, onPublish, onBack, l
           Back to AI Generation
         </button>
         <button 
-          onClick={onPublish}
-          disabled={loading}
+          onClick={() => onPublish(selectedPlatforms)}
+          disabled={loading || selectedPlatforms.length === 0}
           className="btn-primary btn-publish"
         >
-          {loading ? 'Publishing...' : 'Publish to All Platforms'}
+          {loading ? 'Publishing...' : `Publish to ${selectedPlatforms.length} Platform${selectedPlatforms.length !== 1 ? 's' : ''}`}
         </button>
       </div>
 

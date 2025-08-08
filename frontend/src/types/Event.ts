@@ -64,10 +64,28 @@ export interface EventDetail {
 
 export interface CalendarEvent {
   id: number;
-  theme?: string;
-  date_time: string;
+  title: string;
+  time: string;
+  venue: string;
   venue_name?: string;
+  date_time?: string;
+  theme?: string;
   status: 'draft' | 'scheduled' | 'published' | 'cancelled';
+  rsvp_count: number;
+}
+
+// Legacy interface for backward compatibility
+export interface Event {
+  id?: number;
+  date_time: string;
+  venue_id: number;
+  venue?: Venue;
+  description?: string;
+  manual_theme_override?: string;
+  theme?: string;
+  ai_generated_description?: string;
+  banner_image_url?: string;
+  status?: 'draft' | 'scheduled' | 'published' | 'cancelled';
 }
 
 export interface EventsResponse {

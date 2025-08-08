@@ -1,0 +1,38 @@
+.unified-event-view {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e9ecef;
+  overflow: hidden;
+}
+
+.unified-event-view.list-view {
+  /* Let EventList handle its own styling */
+}
+
+.unified-event-view.calendar-view {
+  /* Let EventCalendar handle its own styling */
+}
+
+/* Ensure seamless integration */
+.unified-event-view .event-list,
+.unified-event-view .event-calendar {
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .unified-event-view {
+    border-radius: 8px;
+    margin: 0 -8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .unified-event-view {
+    border-radius: 6px;
+    margin: 0 -4px;
+  }
+}

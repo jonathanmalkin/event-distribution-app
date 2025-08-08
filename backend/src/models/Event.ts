@@ -21,9 +21,18 @@ export interface Event {
   ai_generated_theme?: string;
   ai_generated_description?: string;
   manual_theme_override?: string;
+  organizer_id?: number; // Reference to organizers table
   created_at?: Date;
   updated_at?: Date;
   status: 'draft' | 'scheduled' | 'published' | 'cancelled';
+  
+  // WordPress import fields
+  wordpress_event_id?: number;
+  wordpress_url?: string;
+  imported_at?: Date;
+  last_synced_at?: Date;
+  wordpress_modified_at?: Date;
+  sync_status?: 'synced' | 'conflicts' | 'error';
   
   // Joined venue data (when populated)
   venue?: Venue;

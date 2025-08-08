@@ -14,7 +14,8 @@ router.post('/', async (req, res) => {
       theme,
       description,
       banner_image_url,
-      status = 'draft'
+      status = 'draft',
+      organizer_id
     }: Partial<Event> = req.body;
 
     if (!date_time || !venue_id) {
@@ -23,13 +24,22 @@ router.post('/', async (req, res) => {
       });
     }
 
+    // Get default organizer if none provided
+    let finalOrganizerId = organizer_id;
+    if (!finalOrganizerId) {
+      const defaultOrganizerResult = await pool.query('SELECT id FROM organizers WHERE is_default = true');
+      if (defaultOrganizerResult.rows.length > 0) {
+        finalOrganizerId = defaultOrganizerResult.rows[0].id;
+      }
+    }
+
     const query = `
-      INSERT INTO events (date_time, venue_id, manual_theme_override, theme, description, banner_image_url, status, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+      INSERT INTO events (date_time, venue_id, manual_theme_override, theme, description, banner_image_url, status, organizer_id, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
       RETURNING *
     `;
 
-    const values = [date_time, venue_id, manual_theme_override, theme, description, banner_image_url, status];
+    const values = [date_time, venue_id, manual_theme_override, theme, description, banner_image_url, status, finalOrganizerId];
     const result = await pool.query(query, values);
 
     res.status(201).json(result.rows[0]);

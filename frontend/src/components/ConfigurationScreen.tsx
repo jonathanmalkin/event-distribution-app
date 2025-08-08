@@ -35,7 +35,7 @@ interface PlatformConfig {
   wordpress: {
     url: string;
     username: string;
-    appPassword: string;
+    password: string;
   };
   facebook: {
     appId: string;
@@ -377,12 +377,12 @@ const ConfigurationScreen: React.FC<ConfigurationScreenProps> = ({ onClose }) =>
                 </div>
 
                 <div className="form-group">
-                  <label>App Password</label>
+                  <label>Application Password</label>
                   <input
                     type="password"
-                    value={platformConfig.wordpress.appPassword}
-                    onChange={(e) => updatePlatformConfig('wordpress', 'appPassword', e.target.value)}
-                    placeholder="WordPress app password"
+                    value={platformConfig.wordpress.password}
+                    onChange={(e) => updatePlatformConfig('wordpress', 'password', e.target.value)}
+                    placeholder="WordPress application password"
                   />
                 </div>
               </div>

@@ -1,8 +1,13 @@
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
+import { requireAuth } from '../middleware/auth';
 
 const router = express.Router();
+
+// Apply auth to all config routes
+router.use(requireAuth);
+
 
 // Get AI prompts configuration
 router.get('/ai-prompts', async (req, res) => {
@@ -56,9 +61,9 @@ router.get('/platforms', async (req, res) => {
     // Return sanitized platform config structure
     const platformConfig = {
       wordpress: {
-        url: process.env.WORDPRESS_URL || '',
+        url: process.env.WORDPRESS_SITE_URL || '',
         username: process.env.WORDPRESS_USERNAME || '',
-        appPassword: process.env.WORDPRESS_APP_PASSWORD ? '••••••••' : ''
+        password: process.env.WORDPRESS_PASSWORD ? '••••••••' : ''
       },
       facebook: {
         appId: process.env.FACEBOOK_APP_ID || '',
@@ -95,91 +100,10 @@ router.get('/platforms', async (req, res) => {
 
 // Update platform configuration
 router.put('/platforms', async (req, res) => {
-  try {
-    const config = req.body;
-    const envPath = path.join(__dirname, '../../.env');
-    
-    // Read current .env file
-    let envContent = '';
-    if (fs.existsSync(envPath)) {
-      envContent = fs.readFileSync(envPath, 'utf8');
-    }
-
-    // Function to update or add environment variable
-    const updateEnvVar = (key: string, value: string) => {
-      const regex = new RegExp(`^${key}=.*$`, 'm');
-      const newLine = `${key}=${value}`;
-      
-      if (regex.test(envContent)) {
-        envContent = envContent.replace(regex, newLine);
-      } else {
-        envContent += `\n${newLine}`;
-      }
-    };
-
-    // Update environment variables (only if not masked)
-    if (config.wordpress) {
-      if (config.wordpress.url) updateEnvVar('WORDPRESS_URL', config.wordpress.url);
-      if (config.wordpress.username) updateEnvVar('WORDPRESS_USERNAME', config.wordpress.username);
-      if (config.wordpress.appPassword && config.wordpress.appPassword !== '••••••••') {
-        updateEnvVar('WORDPRESS_APP_PASSWORD', config.wordpress.appPassword);
-      }
-    }
-
-    if (config.facebook) {
-      if (config.facebook.appId) updateEnvVar('FACEBOOK_APP_ID', config.facebook.appId);
-      if (config.facebook.appSecret && config.facebook.appSecret !== '••••••••') {
-        updateEnvVar('FACEBOOK_APP_SECRET', config.facebook.appSecret);
-      }
-      if (config.facebook.accessToken && config.facebook.accessToken !== '••••••••') {
-        updateEnvVar('FACEBOOK_ACCESS_TOKEN', config.facebook.accessToken);
-      }
-    }
-
-    if (config.instagram) {
-      if (config.instagram.appId) updateEnvVar('INSTAGRAM_APP_ID', config.instagram.appId);
-      if (config.instagram.appSecret && config.instagram.appSecret !== '••••••••') {
-        updateEnvVar('INSTAGRAM_APP_SECRET', config.instagram.appSecret);
-      }
-      if (config.instagram.accessToken && config.instagram.accessToken !== '••••••••') {
-        updateEnvVar('INSTAGRAM_ACCESS_TOKEN', config.instagram.accessToken);
-      }
-    }
-
-    if (config.eventbrite) {
-      if (config.eventbrite.apiKey && config.eventbrite.apiKey !== '••••••••') {
-        updateEnvVar('EVENTBRITE_API_KEY', config.eventbrite.apiKey);
-      }
-      if (config.eventbrite.organizationId) updateEnvVar('EVENTBRITE_ORGANIZATION_ID', config.eventbrite.organizationId);
-    }
-
-    if (config.meetup) {
-      if (config.meetup.apiKey && config.meetup.apiKey !== '••••••••') {
-        updateEnvVar('MEETUP_API_KEY', config.meetup.apiKey);
-      }
-      if (config.meetup.groupId) updateEnvVar('MEETUP_GROUP_ID', config.meetup.groupId);
-    }
-
-    if (config.email) {
-      if (config.email.smtpHost) updateEnvVar('SMTP_HOST', config.email.smtpHost);
-      if (config.email.smtpPort) updateEnvVar('SMTP_PORT', config.email.smtpPort.toString());
-      if (config.email.smtpUser) updateEnvVar('SMTP_USER', config.email.smtpUser);
-      if (config.email.smtpPass && config.email.smtpPass !== '••••••••') {
-        updateEnvVar('SMTP_PASS', config.email.smtpPass);
-      }
-    }
-
-    // Write updated .env file
-    fs.writeFileSync(envPath, envContent.trim() + '\n');
-    
-    res.json({ 
-      message: 'Platform configuration updated successfully',
-      note: 'Changes will take effect after server restart'
-    });
-  } catch (error) {
-    console.error('Error updating platform config:', error);
-    res.status(500).json({ error: 'Failed to update platform configuration' });
-  }
+  res.status(403).json({ 
+    error: 'Configuration via API is disabled for security reasons.',
+    message: 'Please update credentials directly in the environment variables and restart the server.'
+  });
 });
 
 // Test platform connections
@@ -193,12 +117,14 @@ router.post('/test-connections', async (req, res) => {
       switch (platform) {
         case 'wordpress':
           // Test WordPress connection
-          if (process.env.WORDPRESS_URL && process.env.WORDPRESS_USERNAME && process.env.WORDPRESS_APP_PASSWORD) {
+          if (process.env.WORDPRESS_SITE_URL && process.env.WORDPRESS_USERNAME && process.env.WORDPRESS_PASSWORD) {
             try {
-              // Implement WordPress API test
-              results.wordpress = { status: 'success', message: 'WordPress connection configured' };
+              const WordPressService = require('../services/platforms/WordPressService').default;
+              const wordpressService = new WordPressService();
+              const testResult = await wordpressService.testConnection();
+              results.wordpress = testResult;
             } catch (error) {
-              results.wordpress = { status: 'error', message: 'WordPress connection failed' };
+              results.wordpress = { status: 'error', message: `WordPress service error: ${error instanceof Error ? error.message : 'Unknown error'}` };
             }
           } else {
             results.wordpress = { status: 'error', message: 'WordPress credentials not configured' };

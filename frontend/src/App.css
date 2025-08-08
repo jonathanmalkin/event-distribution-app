@@ -5,84 +5,209 @@
   flex-direction: column;
 }
 
-.App-navigation {
-  background: white;
-  border-bottom: 1px solid #dee2e6;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  padding: 0 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  min-height: 70px;
+.App-main {
+  flex: 1;
+  padding: 32px 0;
+  overflow-x: hidden;
 }
 
-.nav-brand h1 {
+/* Settings View */
+.settings-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.settings-header {
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.settings-header h1 {
+  margin: 0 0 8px 0;
+  color: #2c3e50;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.settings-header p {
   margin: 0;
-  color: #495057;
-  font-size: 1.5rem;
+  color: #6c757d;
+  font-size: 16px;
+}
+
+.settings-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.settings-tab {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e9ecef;
+  overflow: hidden;
+}
+
+.settings-tab h2 {
+  margin: 0;
+  padding: 20px 24px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+  color: #2c3e50;
+  font-size: 1.25rem;
   font-weight: 600;
 }
 
-.nav-links {
-  display: flex;
-  gap: 8px;
+.settings-tab > div:not(h2) {
+  padding: 24px;
 }
 
-.nav-link {
-  padding: 10px 20px;
-  background: none;
-  border: 1px solid transparent;
-  border-radius: 6px;
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Full Create Modal */
+.full-create-modal {
+  background: white;
+  border-radius: 16px;
+  width: 90vw;
+  max-width: 1000px;
+  height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.2s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.full-create-modal .modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e9ecef;
+  background: #f8f9fa;
+}
+
+.full-create-modal .modal-header h2 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.full-create-modal .close-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: #e9ecef;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
   color: #6c757d;
   transition: all 0.2s ease;
 }
 
-.nav-link:hover {
-  background: #f8f9fa;
+.full-create-modal .close-btn:hover {
+  background: #dee2e6;
   color: #495057;
 }
 
-.nav-link.active {
-  background: #007bff;
-  border-color: #007bff;
-  color: white;
-}
-
-.App-main {
+.full-create-modal > :last-child {
   flex: 1;
-  padding: 20px;
-  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 0;
 }
 
 @media (max-width: 768px) {
-  .App-navigation {
-    padding: 0 16px;
-    flex-direction: column;
-    gap: 12px;
-    min-height: auto;
-    padding-top: 16px;
-    padding-bottom: 16px;
-  }
-  
-  .nav-brand h1 {
-    font-size: 1.25rem;
-  }
-  
-  .nav-links {
-    width: 100%;
-    justify-content: center;
-  }
-  
-  .nav-link {
-    flex: 1;
-    text-align: center;
-  }
-  
   .App-main {
-    padding: 16px;
+    padding: 20px 0;
+  }
+
+  .settings-container {
+    padding: 0 16px;
+  }
+
+  .settings-header {
+    margin-bottom: 24px;
+    text-align: left;
+  }
+
+  .settings-header h1 {
+    font-size: 1.75rem;
+  }
+
+  .settings-tabs {
+    gap: 20px;
+  }
+
+  .settings-tab h2 {
+    padding: 16px 20px;
+    font-size: 1.125rem;
+  }
+
+  .settings-tab > div:not(h2) {
+    padding: 20px;
+  }
+
+  .full-create-modal {
+    width: 95vw;
+    height: 95vh;
+  }
+
+  .full-create-modal .modal-header {
+    padding: 16px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .App-main {
+    padding: 16px 0;
+  }
+
+  .settings-container {
+    padding: 0 12px;
+  }
+
+  .settings-header h1 {
+    font-size: 1.5rem;
   }
 }
 

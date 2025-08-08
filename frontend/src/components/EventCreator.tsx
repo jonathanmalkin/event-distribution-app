@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import EventForm from './EventForm';
 import AIThemeGenerator from './AIThemeGenerator';
 import EventPreview from './EventPreview';
 import ConfigurationScreen from './ConfigurationScreen';
+import DraftIndicator from './DraftIndicator';
+import { useAutoSave } from '../hooks/useAutoSave';
 import './EventCreator.css';
 
 interface Venue {
@@ -35,6 +37,55 @@ const EventCreator: React.FC = () => {
     manual_theme_override: ''
   });
   const [loading, setLoading] = useState(false);
+  const [workflowId] = useState(() => `full_create_${Date.now()}`);
+  const [showDraftDialog, setShowDraftDialog] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+
+  // Auto-save functionality
+  const { saveDraft, loadDraft, clearDraft, hasExistingDraft } = useAutoSave({
+    data: { event, currentStep },
+    key: workflowId,
+    interval: 30000, // Save every 30 seconds
+    enabled: true,
+    onSave: () => setLastSaved(new Date())
+  });
+
+  // Check for existing drafts on mount
+  useEffect(() => {
+    if (hasExistingDraft()) {
+      setShowDraftDialog(true);
+    }
+  }, [hasExistingDraft]);
+
+  // Save draft whenever event or step changes
+  useEffect(() => {
+    if (event.date_time || event.venue_id || event.manual_theme_override) {
+      saveDraft({ event, currentStep }, getStepNumber(currentStep));
+    }
+  }, [event, currentStep, saveDraft]);
+
+  const getStepNumber = (step: string): number => {
+    switch (step) {
+      case 'form': return 1;
+      case 'ai': return 2;
+      case 'preview': return 3;
+      default: return 1;
+    }
+  };
+
+  const handleLoadDraft = () => {
+    const draft = loadDraft();
+    if (draft) {
+      setEvent(draft.event);
+      setCurrentStep(draft.currentStep);
+    }
+    setShowDraftDialog(false);
+  };
+
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setShowDraftDialog(false);
+  };
 
   const handleFormSubmit = (formData: Event) => {
     setEvent(formData);
@@ -51,9 +102,10 @@ const EventCreator: React.FC = () => {
     setCurrentStep('preview');
   };
 
-  const handlePublish = async () => {
+  const handlePublish = async (selectedPlatforms: string[]) => {
     setLoading(true);
     try {
+      // Step 1: Create the event
       const response = await fetch('http://localhost:3001/api/events', {
         method: 'POST',
         headers: {
@@ -72,10 +124,29 @@ const EventCreator: React.FC = () => {
       const createdEvent = await response.json();
       console.log('Event created:', createdEvent);
       
-      // TODO: Trigger distribution to all platforms
-      alert('Event created successfully!');
+      // Step 2: Trigger distribution to selected platforms
+      const distributionResponse = await fetch(`http://localhost:3001/api/distribution/publish/${createdEvent.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          platforms: selectedPlatforms 
+        }),
+      });
+
+      if (distributionResponse.ok) {
+        const distributionResult = await distributionResponse.json();
+        console.log('Distribution initiated:', distributionResult);
+        alert(`Event created and publishing to ${distributionResult.platforms.join(', ')}!`);
+      } else {
+        // Event was created but distribution failed
+        console.error('Distribution failed:', await distributionResponse.text());
+        alert('Event created successfully, but distribution failed. You can manually distribute it from Event Management.');
+      }
       
-      // Reset form
+      // Clear draft and reset form
+      clearDraft();
       setEvent({
         date_time: '',
         venue_id: 0,
@@ -159,8 +230,37 @@ const EventCreator: React.FC = () => {
     );
   }
 
+  // Draft Recovery Dialog
+  const renderDraftDialog = () => {
+    if (!showDraftDialog) return null;
+
+    return (
+      <div className="draft-dialog-overlay">
+        <div className="draft-dialog">
+          <h3>📝 Draft Found</h3>
+          <p>You have an unsaved draft from a previous session. Would you like to continue where you left off?</p>
+          <div className="draft-dialog-buttons">
+            <button 
+              onClick={handleLoadDraft}
+              className="btn btn-primary"
+            >
+              Continue Draft
+            </button>
+            <button 
+              onClick={handleDiscardDraft}
+              className="btn btn-secondary"
+            >
+              Start Fresh
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="event-creator">
+      {renderDraftDialog()}
       <div className="workflow-header">
         <div className="workflow-title">
           <h1>Event Distribution App</h1>
@@ -194,6 +294,12 @@ const EventCreator: React.FC = () => {
       <div className="step-content">
         {renderCurrentStep()}
       </div>
+      
+      <DraftIndicator 
+        isEnabled={!showConfig && (event.date_time !== '' || event.venue_id !== 0 || event.manual_theme_override !== '')}
+        lastSaved={lastSaved}
+        autoSaveInterval={30000}
+      />
     </div>
   );
 };
