@@ -49,7 +49,11 @@ interface Conflict {
   };
 }
 
-const WordPressImport: React.FC = () => {
+interface WordPressImportProps {
+  onBack?: () => void;
+}
+
+const WordPressImport: React.FC<WordPressImportProps> = ({ onBack }) => {
   const [importOptions, setImportOptions] = useState<ImportOptions>({
     includeImages: true,
     conflictStrategy: 'manual',
@@ -447,6 +451,15 @@ const WordPressImport: React.FC = () => {
   return (
     <div className="wordpress-import">
       <div className="import-header">
+        {onBack && (
+          <button 
+            onClick={onBack}
+            className="back-to-manage-btn"
+            title="Back to Event Management"
+          >
+            ← Back
+          </button>
+        )}
         <h2>WordPress Import</h2>
         <p>Import events from your WordPress site using The Events Calendar plugin</p>
       </div>

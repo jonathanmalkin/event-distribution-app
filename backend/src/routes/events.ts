@@ -232,6 +232,8 @@ router.get('/calendar/:year/:month', async (req, res) => {
         theme: event.theme || event.manual_theme_override,
         date_time: event.date_time,
         venue_name: event.venue_name,
+        venue_city: event.venue_city,
+        venue_state: event.venue_state,
         status: event.status
       });
       

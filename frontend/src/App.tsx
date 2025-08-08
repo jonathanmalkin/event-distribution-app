@@ -11,7 +11,8 @@ function App() {
   const getInitialPage = (): ActivePage => {
     const params = new URLSearchParams(window.location.search);
     const page = params.get('page');
-    return (page === 'create' || page === 'manage' || page === 'import') ? page : 'manage';
+    // Always default to 'manage' for better user experience
+    return (page === 'create' || page === 'import') ? page : 'manage';
   };
 
   const [activePage, setActivePage] = useState<ActivePage>(getInitialPage);
@@ -30,35 +31,18 @@ function App() {
         <div className="nav-brand">
           <h1>Event Distribution App</h1>
         </div>
-        <div className="nav-links">
-          <button 
-            className={`nav-link ${activePage === 'manage' ? 'active' : ''}`}
-            onClick={() => setActivePage('manage')}
-          >
-            Manage Events
-          </button>
-          <button 
-            className={`nav-link ${activePage === 'create' ? 'active' : ''}`}
-            onClick={() => setActivePage('create')}
-          >
-            Create Event
-          </button>
-          <button 
-            className={`nav-link ${activePage === 'import' ? 'active' : ''}`}
-            onClick={() => setActivePage('import')}
-          >
-            WordPress Import
-          </button>
-        </div>
       </nav>
       
       <main className="App-main">
         {activePage === 'create' ? (
-          <EventCreator />
+          <EventCreator onBack={() => setActivePage('manage')} />
         ) : activePage === 'import' ? (
-          <WordPressImport />
+          <WordPressImport onBack={() => setActivePage('manage')} />
         ) : (
-          <EventManagement />
+          <EventManagement 
+            onCreateEvent={() => setActivePage('create')}
+            onImportEvents={() => setActivePage('import')}
+          />
         )}
       </main>
     </div>

@@ -68,6 +68,8 @@ export interface CalendarEvent {
   time: string;
   venue: string;
   venue_name?: string;
+  venue_city?: string;
+  venue_state?: string;
   date_time?: string;
   theme?: string;
   status: 'draft' | 'scheduled' | 'published' | 'cancelled';

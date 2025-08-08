@@ -56,6 +56,7 @@ const EventCalendar: React.FC<EventCalendarProps> = ({
     }
   };
 
+
   const renderCalendarGrid = () => {
     const daysInMonth = getDaysInMonth(currentMonth);
     const firstDay = getFirstDayOfMonth(currentMonth);
@@ -90,18 +91,14 @@ const EventCalendar: React.FC<EventCalendarProps> = ({
                 className="event-item"
                 style={{ backgroundColor: getStatusColor(event.status) }}
                 onClick={() => onEventSelect(event.id)}
-                title={`${event.theme || 'Untitled Event'} at ${event.venue_name || 'TBD'}`}
+                title={`${event.theme || 'Untitled Event'} at ${event.venue_name || 'TBD'} - ${event.venue_city || ''}, ${event.venue_state || ''}`}
               >
-                <span className="event-time">
-                  {new Date(event.date_time || event.time).toLocaleTimeString('en-US', { 
-                    hour: 'numeric', 
-                    minute: '2-digit',
-                    hour12: true 
-                  })}
-                </span>
-                <span className="event-title">
-                  {event.theme || 'Untitled Event'}
-                </span>
+                <div className="event-venue-name">
+                  {event.venue_name || 'TBD'}
+                </div>
+                <div className="event-location">
+                  {event.venue_city && event.venue_state ? `${event.venue_city}, ${event.venue_state}` : event.venue_city || event.venue_state || ''}
+                </div>
               </div>
             ))}
             {dayEvents.length > 3 && (

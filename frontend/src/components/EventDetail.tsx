@@ -8,18 +8,21 @@ interface EventDetailProps {
   onClose: () => void;
   onUpdate: (eventId: number, updates: Partial<EventDetailType>) => void;
   onRepost: (eventId: number, platforms: string[]) => void;
+  onDelete: (eventId: number) => void;
 }
 
 const EventDetail: React.FC<EventDetailProps> = ({
   event,
   onClose,
   onUpdate,
-  onRepost
+  onRepost,
+  onDelete
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedEvent, setEditedEvent] = useState<EventDetailType>(event);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [showRepostModal, setShowRepostModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const platforms = [
     { key: 'wordpress', name: 'WordPress' },
@@ -43,6 +46,11 @@ const EventDetail: React.FC<EventDetailProps> = ({
   const handleCancel = () => {
     setEditedEvent(event);
     setIsEditing(false);
+  };
+
+  const handleDelete = () => {
+    onDelete(event.id);
+    onClose(); // Close the modal after deletion
   };
 
   const handleRepost = async () => {
@@ -131,6 +139,9 @@ const EventDetail: React.FC<EventDetailProps> = ({
             </button>
             <button className="status-btn" onClick={() => window.open(`http://localhost:3001/api/distribution/status/${event.id}`, '_blank')}>
               📊 Status
+            </button>
+            <button className="delete-btn" onClick={() => setShowDeleteConfirm(true)}>
+              🗑️ Delete
             </button>
             <button className="close-btn" onClick={onClose}>
               ✕
@@ -374,6 +385,38 @@ const EventDetail: React.FC<EventDetailProps> = ({
                     setShowRepostModal(false);
                     setSelectedPlatforms([]);
                   }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && (
+          <div className="delete-modal">
+            <div className="delete-content">
+              <h3>⚠️ Delete Event</h3>
+              <p>Are you sure you want to delete this event?</p>
+              <p><strong>{event.manual_theme_override || event.theme || 'Untitled Event'}</strong></p>
+              <div className="delete-warning">
+                <p>This action cannot be undone. The event will be permanently deleted from:</p>
+                <ul>
+                  <li>The local database</li>
+                  <li>All distribution records</li>
+                  <li>RSVP data</li>
+                </ul>
+                <p><em>Note: This will NOT delete the event from external platforms (Facebook, Eventbrite, etc.) that have already been posted to.</em></p>
+              </div>
+              
+              <div className="delete-actions">
+                <button className="delete-confirm-btn" onClick={handleDelete}>
+                  Yes, Delete Event
+                </button>
+                <button 
+                  className="delete-cancel-btn" 
+                  onClick={() => setShowDeleteConfirm(false)}
                 >
                   Cancel
                 </button>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import EventCalendar from './EventCalendar';
 import EventList from './EventList';
 import EventDetail from './EventDetail';
+import ConfigurationScreen from './ConfigurationScreen';
 import { 
   EventListItem, 
   EventDetail as EventDetailType, 
@@ -12,7 +13,12 @@ import {
 } from '../types/Event';
 import './EventManagement.css';
 
-const EventManagement: React.FC = () => {
+interface EventManagementProps {
+  onCreateEvent: () => void;
+  onImportEvents: () => void;
+}
+
+const EventManagement: React.FC<EventManagementProps> = ({ onCreateEvent, onImportEvents }) => {
   // Get initial state from URL parameters
   const getInitialView = (): 'calendar' | 'list' => {
     const params = new URLSearchParams(window.location.search);
@@ -31,6 +37,7 @@ const EventManagement: React.FC = () => {
   };
 
   const [view, setView] = useState<'calendar' | 'list'>(getInitialView);
+  const [showSettings, setShowSettings] = useState(false);
   const [events, setEvents] = useState<EventListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<EventDetailType | null>(null);
@@ -197,6 +204,37 @@ const EventManagement: React.FC = () => {
     }
   };
 
+  const handleEventDelete = async (eventId: number) => {
+    if (!window.confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:3001/api/events/${eventId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        alert('Event deleted successfully');
+        setShowEventDetail(false);
+        setSelectedEvent(null);
+        
+        // Refresh the current view
+        if (view === 'calendar') {
+          loadCalendarEvents();
+        } else {
+          loadEvents();
+        }
+      } else {
+        const error = await response.json();
+        alert(`Failed to delete event: ${error.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      alert('Failed to delete event. Please try again.');
+    }
+  };
+
   const handleBulkAction = async (action: string, data?: any) => {
     if (selectedEvents.length === 0) {
       alert('Please select events first');
@@ -247,24 +285,23 @@ const EventManagement: React.FC = () => {
     setCurrentPage(1);
   };
 
-  const handleImportFromPlatforms = async () => {
-    if (!window.confirm('Import events from platforms? This will only import events from the past year.')) {
+  const handleImportFromWordPress = async () => {
+    if (!window.confirm('Import events from WordPress? This will import events from your WordPress site.')) {
       return;
     }
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3001/api/distribution/import', {
+      const response = await fetch('http://localhost:3001/api/import/wordpress/events', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ platforms: ['eventbrite'] }),
       });
 
       if (response.ok) {
         const result = await response.json();
-        alert(`Sync completed: ${result.imported} events imported. ${result.note}`);
+        alert(`Import completed: ${result.totalImported || 0} events imported from WordPress.`);
         
         // Reload events
         if (view === 'calendar') {
@@ -274,11 +311,11 @@ const EventManagement: React.FC = () => {
         }
       } else {
         const error = await response.json();
-        alert(`Sync failed: ${error.error}`);
+        alert(`Import failed: ${error.error || 'WordPress import failed'}`);
       }
     } catch (error) {
-      console.error('Error syncing from platforms:', error);
-      alert('Failed to sync from platforms');
+      console.error('Error importing from WordPress:', error);
+      alert('Failed to import from WordPress');
     } finally {
       setLoading(false);
     }
@@ -307,12 +344,28 @@ const EventManagement: React.FC = () => {
         
         <div className="header-actions">
           <button 
-            className="import-btn"
-            onClick={handleImportFromPlatforms}
-            disabled={loading}
-            title="Import events from platforms (past year only)"
+            className="create-event-btn"
+            onClick={onCreateEvent}
+            title="Create a new event"
           >
-            📥 Import from Platforms
+            ➕ Create Event
+          </button>
+          
+          <button 
+            className="import-btn"
+            onClick={handleImportFromWordPress}
+            disabled={loading}
+            title="Import events from WordPress site"
+          >
+            📥 Import from WordPress
+          </button>
+          
+          <button 
+            className="settings-btn"
+            onClick={() => setShowSettings(true)}
+            title="Application Settings"
+          >
+            ⚙️
           </button>
           
           {view === 'list' && selectedEvents.length > 0 && (
@@ -375,7 +428,26 @@ const EventManagement: React.FC = () => {
           onClose={() => setShowEventDetail(false)}
           onUpdate={handleEventUpdate}
           onRepost={handleEventRepost}
+          onDelete={handleEventDelete}
         />
+      )}
+      
+      {showSettings && (
+        <div className="settings-overlay">
+          <div className="settings-modal">
+            <div className="settings-header">
+              <h2>Application Settings</h2>
+              <button 
+                className="settings-close-btn"
+                onClick={() => setShowSettings(false)}
+                title="Close Settings"
+              >
+                ✕
+              </button>
+            </div>
+            <ConfigurationScreen onClose={() => setShowSettings(false)} />
+          </div>
+        </div>
       )}
     </div>
   );

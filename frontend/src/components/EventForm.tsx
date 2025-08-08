@@ -201,6 +201,21 @@ const EventForm: React.FC<EventFormProps> = ({ initialData, onSubmit }) => {
 
       <form onSubmit={handleSubmit}>
         <div className="form-group">
+          <label htmlFor="organizer">
+            Organizer
+          </label>
+          <input
+            type="text"
+            id="organizer"
+            name="organizer"
+            value="Saxy Daddy / Jonathan Malkin"
+            disabled
+            className="readonly-field"
+          />
+          <small className="field-help">Event organizer for all platform distributions</small>
+        </div>
+
+        <div className="form-group">
           <label htmlFor="date_time">
             Date & Time
             <span className="required">*</span>

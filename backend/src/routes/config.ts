@@ -5,8 +5,8 @@ import { requireAuth } from '../middleware/auth';
 
 const router = express.Router();
 
-// Apply auth to all config routes
-router.use(requireAuth);
+// Apply auth only to sensitive config routes (platform updates)
+// GET routes are available without auth for UI functionality
 
 
 // Get AI prompts configuration
@@ -29,7 +29,7 @@ router.get('/ai-prompts', async (req, res) => {
 });
 
 // Update AI prompts configuration
-router.put('/ai-prompts', async (req, res) => {
+router.put('/ai-prompts', requireAuth, async (req, res) => {
   try {
     const configPath = path.join(__dirname, '../config/ai-prompts.json');
     const newConfig = req.body;
@@ -99,7 +99,7 @@ router.get('/platforms', async (req, res) => {
 });
 
 // Update platform configuration
-router.put('/platforms', async (req, res) => {
+router.put('/platforms', requireAuth, async (req, res) => {
   res.status(403).json({ 
     error: 'Configuration via API is disabled for security reasons.',
     message: 'Please update credentials directly in the environment variables and restart the server.'
@@ -107,7 +107,7 @@ router.put('/platforms', async (req, res) => {
 });
 
 // Test platform connections
-router.post('/test-connections', async (req, res) => {
+router.post('/test-connections', requireAuth, async (req, res) => {
   try {
     const { platforms } = req.body;
     const results: { [key: string]: { status: 'success' | 'error', message: string } } = {};

@@ -128,32 +128,6 @@ const ConfigurationScreen: React.FC<ConfigurationScreenProps> = ({ onClose }) =>
     }
   };
 
-  const savePlatformConfig = async () => {
-    if (!platformConfig) return;
-    
-    setSaving(true);
-    try {
-      const response = await fetch('http://localhost:3001/api/config/platforms', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(platformConfig),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to save platform configuration');
-      }
-
-      alert('Platform configuration saved successfully!');
-    } catch (error) {
-      console.error('Error saving platform configuration:', error);
-      alert('Failed to save platform configuration. Please try again.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const updateAIPrompt = (section: keyof AIPrompts, field: string, value: string) => {
     if (!aiPrompts) return;
     
@@ -161,18 +135,6 @@ const ConfigurationScreen: React.FC<ConfigurationScreenProps> = ({ onClose }) =>
       ...prev!,
       [section]: {
         ...prev![section],
-        [field]: value
-      }
-    }));
-  };
-
-  const updatePlatformConfig = (platform: keyof PlatformConfig, field: string, value: string | number) => {
-    if (!platformConfig) return;
-    
-    setPlatformConfig(prev => ({
-      ...prev!,
-      [platform]: {
-        ...prev![platform],
         [field]: value
       }
     }));
@@ -345,224 +307,39 @@ const ConfigurationScreen: React.FC<ConfigurationScreenProps> = ({ onClose }) =>
         )}
 
         {/* Platform Configuration Tab */}
-        {activeTab === 'platforms' && platformConfig && (
+        {activeTab === 'platforms' && (
           <div className="config-section">
             <h3>Distribution Platform Configuration</h3>
+            <div className="config-notice">
+              <p><strong>Note:</strong> Platform credentials are managed through environment variables for security.</p>
+              <p>Current platform configuration status:</p>
+            </div>
+            
+            {platformConfig ? (
+              <div className="platform-status">
+                {Object.entries(platformConfig).map(([platform, config]) => (
+                  <div key={platform} className="platform-status-item">
+                    <h4>{platform.charAt(0).toUpperCase() + platform.slice(1)}</h4>
+                    <div className="status-grid">
+                      {Object.entries(config as any).map(([key, value]) => (
+                        <div key={key} className="status-field">
+                          <span className="field-name">{key}:</span>
+                          <span className={`field-status ${value ? 'configured' : 'missing'}`}>
+                            {value ? '✅ Configured' : '❌ Not Set'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p>Loading platform configuration...</p>
+            )}
+            
             <p className="section-description">
-              Configure API keys and credentials for social media and event platforms.
+              To update platform credentials, modify the environment variables in your .env file and restart the server.
             </p>
-
-            <div className="platform-group">
-              <h4>WordPress</h4>
-              
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Site URL</label>
-                  <input
-                    type="url"
-                    value={platformConfig.wordpress.url}
-                    onChange={(e) => updatePlatformConfig('wordpress', 'url', e.target.value)}
-                    placeholder="https://yoursite.com"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Username</label>
-                  <input
-                    type="text"
-                    value={platformConfig.wordpress.username}
-                    onChange={(e) => updatePlatformConfig('wordpress', 'username', e.target.value)}
-                    placeholder="WordPress username"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Application Password</label>
-                  <input
-                    type="password"
-                    value={platformConfig.wordpress.password}
-                    onChange={(e) => updatePlatformConfig('wordpress', 'password', e.target.value)}
-                    placeholder="WordPress application password"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="platform-group">
-              <h4>Facebook</h4>
-              
-              <div className="form-row">
-                <div className="form-group">
-                  <label>App ID</label>
-                  <input
-                    type="text"
-                    value={platformConfig.facebook.appId}
-                    onChange={(e) => updatePlatformConfig('facebook', 'appId', e.target.value)}
-                    placeholder="Facebook App ID"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>App Secret</label>
-                  <input
-                    type="password"
-                    value={platformConfig.facebook.appSecret}
-                    onChange={(e) => updatePlatformConfig('facebook', 'appSecret', e.target.value)}
-                    placeholder="Facebook App Secret"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Access Token</label>
-                  <input
-                    type="password"
-                    value={platformConfig.facebook.accessToken}
-                    onChange={(e) => updatePlatformConfig('facebook', 'accessToken', e.target.value)}
-                    placeholder="Facebook Access Token"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="platform-group">
-              <h4>Instagram</h4>
-              
-              <div className="form-row">
-                <div className="form-group">
-                  <label>App ID</label>
-                  <input
-                    type="text"
-                    value={platformConfig.instagram.appId}
-                    onChange={(e) => updatePlatformConfig('instagram', 'appId', e.target.value)}
-                    placeholder="Instagram App ID"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>App Secret</label>
-                  <input
-                    type="password"
-                    value={platformConfig.instagram.appSecret}
-                    onChange={(e) => updatePlatformConfig('instagram', 'appSecret', e.target.value)}
-                    placeholder="Instagram App Secret"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Access Token</label>
-                  <input
-                    type="password"
-                    value={platformConfig.instagram.accessToken}
-                    onChange={(e) => updatePlatformConfig('instagram', 'accessToken', e.target.value)}
-                    placeholder="Instagram Access Token"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="platform-group">
-              <h4>Eventbrite</h4>
-              
-              <div className="form-row">
-                <div className="form-group">
-                  <label>API Key</label>
-                  <input
-                    type="password"
-                    value={platformConfig.eventbrite.apiKey}
-                    onChange={(e) => updatePlatformConfig('eventbrite', 'apiKey', e.target.value)}
-                    placeholder="Eventbrite API Key"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Organization ID</label>
-                  <input
-                    type="text"
-                    value={platformConfig.eventbrite.organizationId}
-                    onChange={(e) => updatePlatformConfig('eventbrite', 'organizationId', e.target.value)}
-                    placeholder="Eventbrite Organization ID"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="platform-group">
-              <h4>Meetup</h4>
-              
-              <div className="form-row">
-                <div className="form-group">
-                  <label>API Key</label>
-                  <input
-                    type="password"
-                    value={platformConfig.meetup.apiKey}
-                    onChange={(e) => updatePlatformConfig('meetup', 'apiKey', e.target.value)}
-                    placeholder="Meetup API Key"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Group ID</label>
-                  <input
-                    type="text"
-                    value={platformConfig.meetup.groupId}
-                    onChange={(e) => updatePlatformConfig('meetup', 'groupId', e.target.value)}
-                    placeholder="Meetup Group ID"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="platform-group">
-              <h4>Email Configuration</h4>
-              
-              <div className="form-row">
-                <div className="form-group">
-                  <label>SMTP Host</label>
-                  <input
-                    type="text"
-                    value={platformConfig.email.smtpHost}
-                    onChange={(e) => updatePlatformConfig('email', 'smtpHost', e.target.value)}
-                    placeholder="smtp.gmail.com"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>SMTP Port</label>
-                  <input
-                    type="number"
-                    value={platformConfig.email.smtpPort}
-                    onChange={(e) => updatePlatformConfig('email', 'smtpPort', parseInt(e.target.value))}
-                    placeholder="587"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>SMTP User</label>
-                  <input
-                    type="email"
-                    value={platformConfig.email.smtpUser}
-                    onChange={(e) => updatePlatformConfig('email', 'smtpUser', e.target.value)}
-                    placeholder="your-email@gmail.com"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>SMTP Password</label>
-                  <input
-                    type="password"
-                    value={platformConfig.email.smtpPass}
-                    onChange={(e) => updatePlatformConfig('email', 'smtpPass', e.target.value)}
-                    placeholder="App password"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="config-actions">
-              <button onClick={savePlatformConfig} disabled={saving} className="btn-primary">
-                {saving ? 'Saving...' : 'Save Platform Configuration'}
-              </button>
-            </div>
           </div>
         )}
 

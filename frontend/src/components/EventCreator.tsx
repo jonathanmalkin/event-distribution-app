@@ -28,7 +28,11 @@ interface Event {
   banner_image_url?: string;
 }
 
-const EventCreator: React.FC = () => {
+interface EventCreatorProps {
+  onBack?: () => void;
+}
+
+const EventCreator: React.FC<EventCreatorProps> = ({ onBack }) => {
   const [currentStep, setCurrentStep] = useState<'form' | 'ai' | 'preview'>('form');
   const [showConfig, setShowConfig] = useState(false);
   const [event, setEvent] = useState<Event>({
@@ -153,6 +157,11 @@ const EventCreator: React.FC = () => {
         manual_theme_override: ''
       });
       setCurrentStep('form');
+      
+      // Navigate back to manage events if onBack is provided
+      if (onBack) {
+        setTimeout(() => onBack(), 1000); // Small delay to let user see the success message
+      }
     } catch (error) {
       console.error('Error creating event:', error);
       alert('Failed to create event. Please try again.');
@@ -262,6 +271,16 @@ const EventCreator: React.FC = () => {
     <div className="event-creator">
       {renderDraftDialog()}
       <div className="workflow-header">
+        {onBack && (
+          <button 
+            onClick={onBack}
+            className="back-to-manage-btn"
+            title="Back to Event Management"
+          >
+            ← Back
+          </button>
+        )}
+        
         <div className="workflow-title">
           <h1>Event Distribution App</h1>
           <p>Create and distribute Kinky Coffee events automatically</p>

@@ -9,8 +9,9 @@ import { sanitizeVenueName, sanitizeWordPressContent, sanitizeEmail } from '../u
 
 interface WordPressEvent {
   id: number;
-  title: { rendered: string };
-  content: { rendered: string };
+  title: string | { rendered: string };  // Tribe Events API uses string, WordPress API uses object
+  description?: string;                   // Tribe Events API field
+  content?: { rendered: string };         // Standard WordPress API field
   status: 'publish' | 'draft' | 'private';
   start_date: string;
   end_date: string;
@@ -28,7 +29,11 @@ interface WordPressEvent {
     zip: string;
     country: string;
   };
-  organizer?: {
+  organizer?: Array<{
+    id: number;
+    organizer: string;
+    email: string;
+  }> | {
     id: number;
     organizer: string;
     email: string;
@@ -154,7 +159,7 @@ export class WordPressImportService {
         console.error(`Error importing event ${wpEvent.id}:`, error);
         result.errors.push({
           wordpressId: wpEvent.id,
-          message: `Failed to import event: ${wpEvent.title.rendered}`,
+          message: `Failed to import event: ${typeof wpEvent.title === 'string' ? wpEvent.title : wpEvent.title?.rendered || 'Unknown'}`,
           error: error instanceof Error ? error.message : 'Unknown error'
         });
       }
@@ -315,28 +320,55 @@ export class WordPressImportService {
   }
 
   private async mapWordPressEventToLocal(wpEvent: WordPressEvent, venueId: number): Promise<Event> {
-    // Handle missing or malformed title
-    const title = wpEvent.title?.rendered || `Imported Event ${wpEvent.id}`;
+    // Handle The Events Calendar plugin API structure (different from standard WordPress)
+    // Tribe Events API returns title and description as direct strings, not objects with .rendered
+    let title: string;
+    let content: string;
     
-    // Handle missing or malformed content
-    const content = wpEvent.content?.rendered || '';
+    if (typeof wpEvent.title === 'string') {
+      // Tribe Events API format - title is a direct string
+      title = wpEvent.title;
+    } else if (wpEvent.title?.rendered) {
+      // Standard WordPress API format - title has .rendered property
+      title = wpEvent.title.rendered;
+    } else {
+      // Fallback
+      title = `Imported Event ${wpEvent.id}`;
+    }
+    
+    if (typeof wpEvent.description === 'string') {
+      // Tribe Events API format - description is a direct string
+      content = wpEvent.description;
+    } else if (wpEvent.content?.rendered) {
+      // Standard WordPress API format - content has .rendered property  
+      content = wpEvent.content.rendered;
+    } else {
+      // Fallback
+      content = '';
+    }
+    
+    console.log(`DEBUG: Extracted title: "${title}"`);
+    console.log(`DEBUG: Extracted content: "${content.substring(0, 100)}..."`);
     
     // Handle missing dates
     const startDate = wpEvent.start_date ? new Date(wpEvent.start_date) : new Date();
     
-    return {
+    const localEvent = {
       theme: title,
       description: this.stripHtmlTags(content),
       date_time: startDate,
       venue_id: venueId,
-      status: wpEvent.status === 'publish' ? 'published' : 'draft',
+      status: (wpEvent.status === 'publish' ? 'published' : 'draft') as Event['status'],
       wordpress_event_id: wpEvent.id,
       wordpress_url: wpEvent.url || '',
       imported_at: new Date(),
       last_synced_at: new Date(),
       wordpress_modified_at: wpEvent.modified ? new Date(wpEvent.modified) : new Date(),
-      sync_status: 'synced'
+      sync_status: 'synced' as Event['sync_status']
     };
+    
+    console.log('DEBUG: Final mapped local event:', localEvent);
+    return localEvent;
   }
 
   private stripHtmlTags(html: string): string {
@@ -500,13 +532,14 @@ export class WordPressImportService {
     const conflicts: EventConflict[] = [];
 
     // Theme/title conflict
-    if (localEvent.theme !== wpEvent.title.rendered) {
+    const wpTitle = typeof wpEvent.title === 'string' ? wpEvent.title : wpEvent.title?.rendered || '';
+    if (localEvent.theme !== wpTitle) {
       conflicts.push({
         eventId: localEvent.id!,
         wordpressId: wpEvent.id,
         conflictType: 'content',
         localValue: localEvent.theme,
-        wordpressValue: wpEvent.title.rendered,
+        wordpressValue: wpTitle,
         lastModified: {
           local: localEvent.updated_at,
           wordpress: new Date(wpEvent.modified)
@@ -778,12 +811,13 @@ export class WordPressImportService {
         const wpEvents = await this.fetchWordPressEvents({ statusFilter: ['publish'] });
         const eventWithOrganizer = wpEvents.find(event => event.organizer);
         
-        if (eventWithOrganizer?.organizer?.organizer) {
+        const firstOrganizer = Array.isArray(eventWithOrganizer?.organizer) ? eventWithOrganizer.organizer[0] : eventWithOrganizer?.organizer;
+        if (firstOrganizer && 'organizer' in firstOrganizer) {
           // Import organizer from WordPress
           const organizerData = {
-            name: eventWithOrganizer.organizer.organizer,
-            email: eventWithOrganizer.organizer.email || 'events@kinky.coffee',
-            wordpress_organizer_id: eventWithOrganizer.organizer.id,
+            name: firstOrganizer.organizer,
+            email: firstOrganizer.email || 'events@kinky.coffee',
+            wordpress_organizer_id: firstOrganizer.id,
             wordpress_site_url: process.env.WORDPRESS_SITE_URL || '',
             is_default: true,
             imported_at: new Date()
