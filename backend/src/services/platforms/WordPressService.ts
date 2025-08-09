@@ -139,27 +139,27 @@ export class WordPressService {
 
   async createEvent(eventData: WordPressEventData): Promise<WordPressEventResponse> {
     try {
-      // Convert to WordPress post format for The Events Calendar plugin
-      const postData = {
+      // Use The Events Calendar API directly instead of generic posts API
+      const eventPayload = {
         title: eventData.title,
-        content: eventData.content,
+        description: eventData.content,
         status: eventData.status,
-        meta: {
-          _EventStartDate: eventData.start_date,
-          _EventEndDate: eventData.end_date,
-          _EventAllDay: eventData.all_day,
-          _EventTimezone: eventData.timezone || 'America/Los_Angeles',
-          ...(eventData.venue_id && { _EventVenueID: eventData.venue_id }),
-          ...(eventData.organizers && { _EventOrganizerID: eventData.organizers.map(o => o.id) })
-        },
-        ...(eventData.featured_media && { featured_media: eventData.featured_media })
+        start_date: eventData.start_date,
+        end_date: eventData.end_date,
+        all_day: eventData.all_day,
+        timezone: eventData.timezone || 'America/Los_Angeles',
+        ...(eventData.venue_id && { venue_id: eventData.venue_id }),
+        ...(eventData.organizers && eventData.organizers.length > 0 && { 
+          organizers: eventData.organizers.map(o => o.id) 
+        }),
+        ...(eventData.featured_media && { featured_image: eventData.featured_media })
       };
 
-      console.log('Creating WordPress event via posts API...');
+      console.log('Creating WordPress event via Events Calendar API...', eventPayload);
       
       const response = await axios.post(
-        `${this.baseURL}/wp-json/wp/v2/tribe_events`,
-        postData,
+        `${this.baseURL}/wp-json/tribe/events/v1/events`,
+        eventPayload,
         {
           headers: {
             'Authorization': this.getAuthHeader(),
@@ -183,9 +183,9 @@ export class WordPressService {
       console.log(`Setting featured image ${imageId} for WordPress event ${eventId}`);
       
       const response = await axios.post(
-        `${this.baseURL}/wp-json/wp/v2/tribe_events/${eventId}`,
+        `${this.baseURL}/wp-json/tribe/events/v1/events/${eventId}`,
         {
-          featured_media: imageId
+          featured_image: imageId
         },
         {
           headers: {
@@ -223,7 +223,16 @@ export class WordPressService {
   }
 
   private formatWordPressDate(date: Date): string {
-    return date.toISOString().replace('T', ' ').replace('.000Z', '');
+    // The Events Calendar expects YYYY-MM-DD HH:mm:ss format
+    // We need to format in the event's timezone (America/Los_Angeles)
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
   }
 
   async createVenue(venueData: WordPressVenueData): Promise<number> {
@@ -253,6 +262,11 @@ export class WordPressService {
       return response.data.id;
     } catch (error) {
       console.error('Error creating WordPress venue:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('Response status:', error.response?.status);
+        console.error('Response data:', error.response?.data);
+        console.error('Request URL:', error.config?.url);
+      }
       throw new Error(`WordPress venue creation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -304,7 +318,11 @@ export class WordPressService {
       return createResponse.data.id;
     } catch (error) {
       console.error('Error getting/creating WordPress organizer:', error);
-      // Return null to continue without organizer rather than failing
+      if (axios.isAxiosError(error)) {
+        console.error('Response status:', error.response?.status);
+        console.error('Response data:', error.response?.data);
+        console.error('Request URL:', error.config?.url);
+      }
       throw new Error(`WordPress organizer setup failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }

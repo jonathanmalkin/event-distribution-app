@@ -58,15 +58,6 @@ const EventList: React.FC<EventListProps> = ({
     });
   };
 
-  const getStatusBadgeClass = (status: string) => {
-    switch (status) {
-      case 'published': return 'status-published';
-      case 'scheduled': return 'status-scheduled';
-      case 'draft': return 'status-draft';
-      case 'cancelled': return 'status-cancelled';
-      default: return 'status-draft';
-    }
-  };
 
   const getPlatformSuccessCount = (platformStatus: PlatformStatusSummary) => {
     const statuses = Object.values(platformStatus);
@@ -227,7 +218,6 @@ const EventList: React.FC<EventListProps> = ({
               <div className="header-cell date-cell">Date & Time</div>
               <div className="header-cell theme-cell">Theme</div>
               <div className="header-cell venue-cell">Venue</div>
-              <div className="header-cell status-cell">Status</div>
               <div className="header-cell platforms-cell">Platforms</div>
               <div className="header-cell rsvp-cell">RSVPs</div>
               <div className="header-cell actions-cell">Actions</div>
@@ -273,11 +263,6 @@ const EventList: React.FC<EventListProps> = ({
                     )}
                   </div>
                   
-                  <div className="cell status-cell">
-                    <span className={`status-badge ${getStatusBadgeClass(event.status)}`}>
-                      {event.status}
-                    </span>
-                  </div>
                   
                   <div className="cell platforms-cell">
                     <div className="platform-summary">

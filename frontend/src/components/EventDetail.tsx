@@ -35,6 +35,7 @@ const EventDetail: React.FC<EventDetailProps> = ({
 
   const handleSave = () => {
     onUpdate(event.id, {
+      date_time: editedEvent.date_time,
       theme: editedEvent.theme,
       description: editedEvent.description,
       manual_theme_override: editedEvent.manual_theme_override,
@@ -192,6 +193,18 @@ const EventDetail: React.FC<EventDetailProps> = ({
             
             {isEditing ? (
               <div className="edit-form">
+                <div className="form-group">
+                  <label>Date & Time:</label>
+                  <input
+                    type="datetime-local"
+                    value={editedEvent.date_time ? new Date(editedEvent.date_time).toISOString().slice(0, 16) : ''}
+                    onChange={(e) => setEditedEvent({
+                      ...editedEvent,
+                      date_time: e.target.value
+                    })}
+                  />
+                </div>
+                
                 <div className="form-group">
                   <label>Theme Override:</label>
                   <input

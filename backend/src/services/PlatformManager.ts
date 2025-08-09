@@ -114,8 +114,11 @@ export class PlatformManager {
         }
 
         organizerId = await this.wordpressService.getOrCreateOrganizer(localOrganizerData);
+        console.log('WordPress organizer successfully created/retrieved with ID:', organizerId);
       } catch (error) {
-        console.warn('Failed to get/create WordPress organizer, continuing without:', error);
+        console.error('Critical error - Failed to get/create WordPress organizer:', error);
+        console.log('Event will be created without organizer specification');
+        // Don't throw - continue without organizer but log the issue
       }
 
       // Step 2: Create venue if provided
@@ -132,7 +135,9 @@ export class PlatformManager {
           });
           console.log('WordPress venue created with ID:', venueId);
         } catch (error) {
-          console.warn('Failed to create WordPress venue, continuing without:', error);
+          console.error('Critical error - Failed to create WordPress venue:', error);
+          console.log('Event will be created without venue specification');
+          // Don't throw - continue without venue but log the issue
         }
       }
 
@@ -243,7 +248,7 @@ export class PlatformManager {
         `UPDATE event_distributions SET status = $1, platform_event_id = $2, platform_url = $3, error_message = $4, metrics = $5, posted_at = CASE WHEN $1 = 'success' THEN NOW() ELSE posted_at END, last_synced = NOW() WHERE event_id = $6 AND platform = $7`,
         [
           result.success ? 'success' : 'failed', 
-          result.platformId || null, 
+          result.platformId ? String(result.platformId) : null, 
           result.platformUrl || null, 
           result.error || null, 
           JSON.stringify(result.metrics || {}), 

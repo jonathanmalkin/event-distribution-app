@@ -353,9 +353,16 @@ export class WordPressImportService {
     // Handle missing dates
     const startDate = wpEvent.start_date ? new Date(wpEvent.start_date) : new Date();
     
+    // Decode HTML entities
+    const decodedTitle = this.decodeHtmlEntities(title);
+    const decodedDescription = this.processTextContent(content);
+    
+    console.log(`DEBUG: Decoded title: "${decodedTitle}"`);
+    console.log(`DEBUG: Decoded description: "${decodedDescription.substring(0, 100)}..."`);
+    
     const localEvent = {
-      theme: title,
-      description: this.stripHtmlTags(content),
+      theme: decodedTitle,
+      description: decodedDescription,
       date_time: startDate,
       venue_id: venueId,
       status: (wpEvent.status === 'publish' ? 'published' : 'draft') as Event['status'],
@@ -373,6 +380,60 @@ export class WordPressImportService {
 
   private stripHtmlTags(html: string): string {
     return html.replace(/<[^>]*>/g, '').trim();
+  }
+
+  private decodeHtmlEntities(text: string): string {
+    if (!text || typeof text !== 'string') return '';
+
+    // Handle common HTML entities and numeric character references
+    const entityMap: { [key: string]: string } = {
+      '&amp;': '&',
+      '&lt;': '<',
+      '&gt;': '>',
+      '&quot;': '"',
+      '&apos;': "'",
+      '&nbsp;': ' ',
+      '&ndash;': '–',
+      '&mdash;': '—',
+      '&lsquo;': '\u2018',
+      '&rsquo;': '\u2019',
+      '&ldquo;': '"',
+      '&rdquo;': '"',
+      '&hellip;': '…',
+      '&copy;': '©',
+      '&reg;': '®',
+      '&trade;': '™',
+      '&bull;': '•',
+      '&laquo;': '«',
+      '&raquo;': '»'
+    };
+
+    // First, handle named entities
+    let decoded = text;
+    for (const [entity, char] of Object.entries(entityMap)) {
+      decoded = decoded.replace(new RegExp(entity, 'g'), char);
+    }
+
+    // Handle numeric character references (&#8211; format)
+    decoded = decoded.replace(/&#(\d+);/g, (match, num) => {
+      return String.fromCharCode(parseInt(num, 10));
+    });
+
+    // Handle hexadecimal character references (&#x2014; format)
+    decoded = decoded.replace(/&#x([0-9a-fA-F]+);/g, (match, hex) => {
+      return String.fromCharCode(parseInt(hex, 16));
+    });
+
+    return decoded;
+  }
+
+  private processTextContent(text: string): string {
+    if (!text || typeof text !== 'string') return '';
+    
+    // First decode HTML entities, then strip HTML tags
+    const decoded = this.decodeHtmlEntities(text);
+    const stripped = this.stripHtmlTags(decoded);
+    return stripped.trim();
   }
 
   private async handleVenue(wpVenue?: WordPressEvent['venue']): Promise<{ venueId: number; created: boolean }> {
@@ -399,12 +460,12 @@ export class WordPressImportService {
 
     // Create new local venue - ensure name is not empty and sanitized
     const rawVenueName = wpVenue.venue || `WordPress Venue ${wpVenue.id}`;
-    const venueName = sanitizeVenueName(rawVenueName);
+    const venueName = sanitizeVenueName(this.decodeHtmlEntities(rawVenueName));
     const newVenue: Venue = {
       name: venueName,
-      street_address: sanitizeWordPressContent(wpVenue.address || ''),
-      city: sanitizeWordPressContent(wpVenue.city || ''),
-      state: sanitizeWordPressContent(wpVenue.state || ''),
+      street_address: this.decodeHtmlEntities(sanitizeWordPressContent(wpVenue.address || '')),
+      city: this.decodeHtmlEntities(sanitizeWordPressContent(wpVenue.city || '')),
+      state: this.decodeHtmlEntities(sanitizeWordPressContent(wpVenue.state || '')),
       zip_code: wpVenue.zip || ''
     };
 
@@ -425,34 +486,110 @@ export class WordPressImportService {
   }
 
   private async createLocalEvent(event: Event): Promise<number> {
-    const result = await pool.query(`
-      INSERT INTO events (
-        theme, description, date_time, venue_id, banner_image_url, status,
-        wordpress_event_id, wordpress_url, imported_at, last_synced_at,
-        wordpress_modified_at, sync_status, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
-      RETURNING id
-    `, [
-      event.theme, event.description, event.date_time, event.venue_id,
-      event.banner_image_url, event.status, event.wordpress_event_id,
-      event.wordpress_url, event.imported_at, event.last_synced_at,
-      event.wordpress_modified_at, event.sync_status
-    ]);
-    return result.rows[0].id;
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      
+      const result = await client.query(`
+        INSERT INTO events (
+          theme, description, date_time, venue_id, banner_image_url, status,
+          wordpress_event_id, wordpress_url, imported_at, last_synced_at,
+          wordpress_modified_at, sync_status, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
+        RETURNING id
+      `, [
+        event.theme, event.description, event.date_time, event.venue_id,
+        event.banner_image_url, event.status, event.wordpress_event_id,
+        event.wordpress_url, event.imported_at, event.last_synced_at,
+        event.wordpress_modified_at, event.sync_status
+      ]);
+      
+      const eventId = result.rows[0].id;
+      
+      // Create distribution record showing successful WordPress import
+      await client.query(`
+        INSERT INTO event_distributions (
+          event_id, platform, status, posted_at, platform_event_id, platform_url
+        ) VALUES ($1, $2, $3, $4, $5, $6)
+      `, [
+        eventId,
+        'wordpress',
+        'success',
+        event.imported_at,
+        event.wordpress_event_id,
+        event.wordpress_url
+      ]);
+      
+      await client.query('COMMIT');
+      return eventId;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   private async updateLocalEvent(event: Event): Promise<void> {
-    await pool.query(`
-      UPDATE events SET
-        theme = $1, description = $2, date_time = $3, venue_id = $4,
-        banner_image_url = $5, status = $6, last_synced_at = $7,
-        wordpress_modified_at = $8, sync_status = $9, updated_at = NOW()
-      WHERE id = $10
-    `, [
-      event.theme, event.description, event.date_time, event.venue_id,
-      event.banner_image_url, event.status, new Date(), event.wordpress_modified_at,
-      event.sync_status, event.id
-    ]);
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      
+      await client.query(`
+        UPDATE events SET
+          theme = $1, description = $2, date_time = $3, venue_id = $4,
+          banner_image_url = $5, status = $6, last_synced_at = $7,
+          wordpress_modified_at = $8, sync_status = $9, updated_at = NOW()
+        WHERE id = $10
+      `, [
+        event.theme, event.description, event.date_time, event.venue_id,
+        event.banner_image_url, event.status, new Date(), event.wordpress_modified_at,
+        event.sync_status, event.id
+      ]);
+      
+      // Update or create distribution record for WordPress platform
+      const distributionResult = await client.query(`
+        SELECT id FROM event_distributions 
+        WHERE event_id = $1 AND platform = $2
+      `, [event.id, 'wordpress']);
+      
+      if (distributionResult.rows.length > 0) {
+        // Update existing distribution record
+        await client.query(`
+          UPDATE event_distributions SET
+            status = $1, posted_at = $2, platform_event_id = $3, platform_url = $4
+          WHERE event_id = $5 AND platform = $6
+        `, [
+          'success',
+          new Date(),
+          event.wordpress_event_id,
+          event.wordpress_url,
+          event.id,
+          'wordpress'
+        ]);
+      } else {
+        // Create new distribution record
+        await client.query(`
+          INSERT INTO event_distributions (
+            event_id, platform, status, posted_at, platform_event_id, platform_url
+          ) VALUES ($1, $2, $3, $4, $5, $6)
+        `, [
+          event.id,
+          'wordpress',
+          'success',
+          new Date(),
+          event.wordpress_event_id,
+          event.wordpress_url
+        ]);
+      }
+      
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   private async findVenueMapping(wordpressVenueId: number): Promise<any> {
@@ -533,7 +670,8 @@ export class WordPressImportService {
 
     // Theme/title conflict
     const wpTitle = typeof wpEvent.title === 'string' ? wpEvent.title : wpEvent.title?.rendered || '';
-    if (localEvent.theme !== wpTitle) {
+    const decodedWpTitle = this.decodeHtmlEntities(wpTitle);
+    if (localEvent.theme !== decodedWpTitle) {
       conflicts.push({
         eventId: localEvent.id!,
         wordpressId: wpEvent.id,
