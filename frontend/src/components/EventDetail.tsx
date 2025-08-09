@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import PlatformStatusIndicator from './PlatformStatusIndicator';
 import { EventDetail as EventDetailType } from '../types/Event';
 import './EventDetail.css';
 
@@ -70,7 +69,7 @@ const EventDetail: React.FC<EventDetailProps> = ({
       });
 
       if (response.ok) {
-        const result = await response.json();
+        await response.json();
         alert(`Distribution initiated for ${selectedPlatforms.join(', ')}`);
         // Refresh event data to show updated status
         window.location.reload(); // Simple refresh for now
